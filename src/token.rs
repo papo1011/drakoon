@@ -1,6 +1,9 @@
 use logos::Logos;
 
 #[derive(Logos, Debug, PartialEq)]
+#[logos(skip r"//[^\n]*")]
+#[logos(skip r"///[^\n]*")]
+#[logos(skip r"///|[^\n]*")]
 pub enum Token {
     #[token("fn")]
     Fn,
@@ -43,12 +46,4 @@ pub enum Token {
 
     #[regex(r"([0-9]+\.[0-9]*|[0-9]*\.[0-9]+)([eE][+-]?[0-9]+)?")]
     Double,
-
-    #[regex(r"//[^\n]*", logos::skip)]
-    #[regex(r"///[^\n]*", logos::skip)]
-    #[regex(r"///|[^\n]*", logos::skip)]
-    Comment,
-
-    #[regex(r"[ \t\r\n\f]+", logos::skip)]
-    Whitespace,
 }
