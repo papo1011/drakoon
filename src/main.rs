@@ -4,7 +4,7 @@ mod token;
 
 use clap::Parser;
 use cli::Cli;
-use lexer::Lexer;
+use lexer::{Lexer, LexerError};
 use std::fs;
 
 fn main() {
@@ -19,16 +19,17 @@ fn main() {
         .unwrap_or_else(|_| panic!("Failed to read file {:?}", args.file));
 
     println!("Lexing file: {:?}", args.file);
+
     let lexer = Lexer::new(&source);
 
-    for (start, token, end) in lexer {
-        let text = &source[start..end];
-        println!(
-            "{:>3}..{:<3} {:20} '{}'",
-            start,
-            end,
-            format!("{:?}", token),
-            text
-        );
+    for result in lexer {
+        match result {
+            Ok((start, token, end)) => {
+                println!("{:?} [{}..{}]", token, start, end);
+            }
+            Err(LexerError::InvalidToken(start, end)) => {
+                eprintln!("Errore: carattere non valido tra {} e {}", start, end);
+            }
+        }
     }
 }
