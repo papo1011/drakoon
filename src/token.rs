@@ -1,11 +1,14 @@
 use logos::Logos;
 
 #[derive(Logos, Debug, PartialEq)]
-#[logos(skip r"[ \t\n\f]+")]
+#[logos(skip r"[ \t\f]+")]
 #[logos(skip r"//[^\n]*")]
 #[logos(skip r"///[^\n]*")]
 #[logos(skip r"///\|[^\n]*")]
 pub enum Token {
+    #[token("\n")]
+    Newline,
+
     #[token("fn")]
     Fn,
     #[token("return")]
