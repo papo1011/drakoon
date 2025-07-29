@@ -1,3 +1,7 @@
+mod token;
+use logos::Logos;
+use token::Token;
+
 fn main() {
-    println!("Hello, world!");
+    println!("Ciao")
 }
