@@ -24,11 +24,17 @@ fn main() {
 
     for result in lexer {
         match result {
-            Ok((start, token, end)) => {
-                println!("{:?} [{}..{}]", token, start, end);
+            Ok((start_pos, token, end_pos)) => {
+                println!(
+                    "{:>3}:{:<3} - {:>3}:{:<3} {:?}",
+                    start_pos.line, start_pos.column, end_pos.line, end_pos.column, token
+                );
             }
-            Err(LexerError::InvalidToken(start, end)) => {
-                eprintln!("Errore: carattere non valido tra {} e {}", start, end);
+            Err(LexerError::InvalidToken(start_pos, end_pos)) => {
+                eprintln!(
+                    "Error: Invalid token at line {}:{} to {}:{}",
+                    start_pos.line, start_pos.column, end_pos.line, end_pos.column
+                );
             }
         }
     }

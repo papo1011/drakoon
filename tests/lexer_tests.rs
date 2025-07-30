@@ -246,14 +246,57 @@ fn test_token_positions() {
     // Check first token (fn)
     let (start, token, end) = results[0].as_ref().unwrap();
     assert_eq!(*token, Token::Fn);
-    assert_eq!(*start, 0);
-    assert_eq!(*end, 2);
+    assert_eq!(start.line, 1);
+    assert_eq!(start.column, 1);
+    assert_eq!(end.line, 1);
+    assert_eq!(end.column, 3);
 
     // Check second token (main)
     let (start, token, end) = results[1].as_ref().unwrap();
     assert_eq!(*token, Token::Id);
-    assert_eq!(*start, 3);
-    assert_eq!(*end, 7);
+    assert_eq!(start.line, 1);
+    assert_eq!(start.column, 4);
+    assert_eq!(end.line, 1);
+    assert_eq!(end.column, 8);
+}
+
+#[test]
+fn test_multiline_positions() {
+    let source = "fn\nmain\n()";
+    let lexer = Lexer::new(source);
+    let results: Vec<_> = lexer.collect();
+
+    // Check first token: fn
+    let (start, token, end) = results[0].as_ref().unwrap();
+    assert_eq!(*token, Token::Fn);
+    assert_eq!(start.line, 1);
+    assert_eq!(start.column, 1);
+    assert_eq!(end.line, 1);
+    assert_eq!(end.column, 3);
+
+    // Check second token: main - on line 2
+    let (start, token, end) = results[1].as_ref().unwrap();
+    assert_eq!(*token, Token::Id);
+    assert_eq!(start.line, 2);
+    assert_eq!(start.column, 1);
+    assert_eq!(end.line, 2);
+    assert_eq!(end.column, 5);
+
+    // Check third token: ( - on line 3
+    let (start, token, end) = results[2].as_ref().unwrap();
+    assert_eq!(*token, Token::LParen);
+    assert_eq!(start.line, 3);
+    assert_eq!(start.column, 1);
+    assert_eq!(end.line, 3);
+    assert_eq!(end.column, 2);
+
+    // Check fourth token: ) - on line 3
+    let (start, token, end) = results[3].as_ref().unwrap();
+    assert_eq!(*token, Token::RParen);
+    assert_eq!(start.line, 3);
+    assert_eq!(start.column, 2);
+    assert_eq!(end.line, 3);
+    assert_eq!(end.column, 3);
 }
 
 #[test]
