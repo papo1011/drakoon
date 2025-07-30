@@ -30,10 +30,14 @@ fn main() {
                     start_pos.line, start_pos.column, end_pos.line, end_pos.column, token
                 );
             }
-            Err(LexerError::InvalidToken(start_pos, end_pos)) => {
+            Err(LexerError::InvalidToken {
+                start,
+                invalid_token,
+                end,
+            }) => {
                 eprintln!(
-                    "Error: Invalid token at line {}:{} to {}:{}",
-                    start_pos.line, start_pos.column, end_pos.line, end_pos.column
+                    "Error: Invalid token {} at line {}:{} to {}:{}",
+                    invalid_token, start.line, start.column, end.line, end.column
                 );
             }
         }

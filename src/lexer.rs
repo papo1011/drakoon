@@ -14,7 +14,11 @@ pub struct Position {
 
 #[derive(Debug)]
 pub enum LexerError {
-    InvalidToken(Position, Position), // start_pos, end_pos
+    InvalidToken {
+        start: Position,
+        invalid_token: String,
+        end: Position,
+    },
 }
 
 impl<'source> Lexer<'source> {
@@ -49,16 +53,20 @@ impl<'source> Iterator for Lexer<'source> {
     type Item = Result<(Position, Token, Position), LexerError>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        self.token_stream.next().map(|(result, span)| match result {
-            Ok(token) => {
-                let start_pos = self.char_to_position(span.start);
-                let end_pos = self.char_to_position(span.end);
-                Ok((start_pos, token, end_pos))
-            }
-            Err(()) => {
-                let start_pos = self.char_to_position(span.start);
-                let end_pos = self.char_to_position(span.end);
-                Err(LexerError::InvalidToken(start_pos, end_pos))
+        self.token_stream.next().map(|(result, span)| {
+            let start = self.char_to_position(span.start);
+            let end = self.char_to_position(span.end);
+
+            match result {
+                Ok(token) => Ok((start, token, end)),
+                Err(()) => {
+                    let invalid_token = self.source[span.start..span.end].to_string();
+                    Err(LexerError::InvalidToken {
+                        start,
+                        invalid_token,
+                        end,
+                    })
+                }
             }
         })
     }
