@@ -1,20 +1,16 @@
-use logos::{Lexer, Logos, Skip};
+use logos::Logos;
+use std::fmt;
 
-/// Callback to update line count and char index
-fn newline_callback(lex: &mut Lexer<Token>) -> Skip {
-    lex.extras.0 += 1;
-    lex.extras.1 = lex.span().end;
-    Skip
+#[derive(Default, Debug, Clone, PartialEq)]
+pub enum LexicalError {
+    #[default]
+    InvalidToken,
 }
 
 #[derive(Logos, Debug, PartialEq)]
-#[logos(skip r"[ \t\f]+")]
-#[logos(skip r"//[^\n]*")]
-#[logos(skip r"///[^\n]*")]
-#[logos(skip r"///\|[^\n]*")]
-#[logos(extras = (usize, usize))] // (line, line_start_char)
+#[logos(skip r"[ \t\f]+", skip r"//[^\n]*",skip r"///[^\n]*", skip r"///\|[^\n]*", error = LexicalError)]
 pub enum Token {
-    #[regex(r"\n", newline_callback)]
+    #[regex(r"\n")]
     Newline,
 
     #[token("fn")]
@@ -103,4 +99,10 @@ pub enum Token {
     Integer,
     #[regex(r"([0-9]+\.[0-9]*|[0-9]*\.[0-9]+)([eE][+-]?[0-9]+)?")]
     Double,
+}
+
+impl fmt::Display for Token {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{:?}", self)
+    }
 }

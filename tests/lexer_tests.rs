@@ -1,5 +1,5 @@
 use drakoon::lexer::Lexer;
-use drakoon::token::Token;
+use drakoon::tokens::Token;
 
 #[test]
 fn test_keywords() {
@@ -165,9 +165,13 @@ fn test_whitespace_skipping() {
         vec![
             Token::Fn,
             Token::Id,
+            Token::Newline,
             Token::LParen,
+            Token::Newline,
             Token::RParen,
+            Token::Newline,
             Token::LBrace,
+            Token::Newline,
             Token::RBrace,
         ]
     );
@@ -188,20 +192,26 @@ fn test_single_line_comments() {
     assert_eq!(
         tokens,
         vec![
+            Token::Newline,
             Token::Fn,
             Token::Id,
             Token::LParen,
             Token::RParen,
             Token::Arrow,
             Token::IntType,
+            Token::Newline,
             Token::LBrace,
+            Token::Newline,
             Token::Let,
             Token::Id,
             Token::Assign,
             Token::Integer,
+            Token::Newline,
             Token::Return,
             Token::Id,
+            Token::Newline,
             Token::RBrace,
+            Token::Newline,
         ]
     );
 }
@@ -221,16 +231,22 @@ fn test_doc_comments() {
     assert_eq!(
         tokens,
         vec![
+            Token::Newline,
+            Token::Newline,
             Token::Fn,
             Token::Id,
             Token::LParen,
             Token::RParen,
             Token::LBrace,
+            Token::Newline,
+            Token::Newline,
             Token::Let,
             Token::Id,
             Token::Assign,
             Token::Integer,
+            Token::Newline,
             Token::RBrace,
+            Token::Newline,
         ]
     );
 }
@@ -246,18 +262,14 @@ fn test_token_positions() {
     // Check first token (fn)
     let (start, token, end) = results[0].as_ref().unwrap();
     assert_eq!(*token, Token::Fn);
-    assert_eq!(start.line, 1);
-    assert_eq!(start.column, 1);
-    assert_eq!(end.line, 1);
-    assert_eq!(end.column, 3);
+    assert_eq!(*start, 0);
+    assert_eq!(*end, 2);
 
     // Check second token (main)
     let (start, token, end) = results[1].as_ref().unwrap();
     assert_eq!(*token, Token::Id);
-    assert_eq!(start.line, 1);
-    assert_eq!(start.column, 4);
-    assert_eq!(end.line, 1);
-    assert_eq!(end.column, 8);
+    assert_eq!(*start, 3);
+    assert_eq!(*end, 7);
 }
 
 #[test]
@@ -269,34 +281,38 @@ fn test_multiline_positions() {
     // Check first token: fn
     let (start, token, end) = results[0].as_ref().unwrap();
     assert_eq!(*token, Token::Fn);
-    assert_eq!(start.line, 1);
-    assert_eq!(start.column, 1);
-    assert_eq!(end.line, 1);
-    assert_eq!(end.column, 3);
+    assert_eq!(*start, 0);
+    assert_eq!(*end, 2);
 
-    // Check second token: main - on line 2
+    // Check second token: \n - on line 1
     let (start, token, end) = results[1].as_ref().unwrap();
-    assert_eq!(*token, Token::Id);
-    assert_eq!(start.line, 2);
-    assert_eq!(start.column, 1);
-    assert_eq!(end.line, 2);
-    assert_eq!(end.column, 5);
+    assert_eq!(*token, Token::Newline);
+    assert_eq!(*start, 2);
+    assert_eq!(*end, 3);
 
-    // Check third token: ( - on line 3
+    // Check third token: main - on line 2
     let (start, token, end) = results[2].as_ref().unwrap();
-    assert_eq!(*token, Token::LParen);
-    assert_eq!(start.line, 3);
-    assert_eq!(start.column, 1);
-    assert_eq!(end.line, 3);
-    assert_eq!(end.column, 2);
+    assert_eq!(*token, Token::Id);
+    assert_eq!(*start, 3);
+    assert_eq!(*end, 7);
 
-    // Check fourth token: ) - on line 3
+    // Check fourth token: \n - on line 2
     let (start, token, end) = results[3].as_ref().unwrap();
+    assert_eq!(*token, Token::Newline);
+    assert_eq!(*start, 7);
+    assert_eq!(*end, 8);
+
+    // Check fifth token: ( - on line 3
+    let (start, token, end) = results[4].as_ref().unwrap();
+    assert_eq!(*token, Token::LParen);
+    assert_eq!(*start, 8);
+    assert_eq!(*end, 9);
+
+    // Check sixth token: ) - on line 3
+    let (start, token, end) = results[5].as_ref().unwrap();
     assert_eq!(*token, Token::RParen);
-    assert_eq!(start.line, 3);
-    assert_eq!(start.column, 2);
-    assert_eq!(end.line, 3);
-    assert_eq!(end.column, 3);
+    assert_eq!(*start, 9);
+    assert_eq!(*end, 10);
 }
 
 #[test]
