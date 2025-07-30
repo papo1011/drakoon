@@ -25,6 +25,8 @@ pub enum Token {
     IntType,
     #[token("Double")]
     DoubleType,
+    #[token("Unit")]
+    UnitType,
 
     #[token("let")]
     Let,

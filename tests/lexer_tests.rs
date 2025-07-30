@@ -220,7 +220,7 @@ fn test_single_line_comments() {
 fn test_doc_comments() {
     let source = r#"
         ///| This is a function comment
-        fn main() {
+        fn example() -> Unit {
             // comment
             let x = 5
         }
@@ -237,6 +237,8 @@ fn test_doc_comments() {
             Token::Id,
             Token::LParen,
             Token::RParen,
+            Token::Arrow,
+            Token::UnitType,
             Token::LBrace,
             Token::Newline,
             Token::Newline,
