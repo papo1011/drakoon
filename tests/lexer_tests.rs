@@ -61,7 +61,7 @@ fn test_operators() {
 
 #[test]
 fn test_punctuation() {
-    let source = ": ; , { } ( ) = -> . :: =>";
+    let source = ": ; , { } ( ) = -> . :: => @";
     let lexer = Lexer::new(source);
     let tokens: Vec<_> = lexer.map(|r| r.unwrap().1).collect();
 
@@ -80,6 +80,7 @@ fn test_punctuation() {
             Token::Dot,
             Token::DoubleColon,
             Token::FatArrow,
+            Token::At,
         ]
     );
 }

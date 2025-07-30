@@ -94,6 +94,8 @@ pub enum Token {
     DoubleColon,
     #[token("=>")]
     FatArrow,
+    #[token("@")]
+    At,
 
     #[regex(r"[A-Za-z_][A-Za-z0-9_]*")]
     Id,
