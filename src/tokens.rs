@@ -1,10 +1,25 @@
 use logos::Logos;
 use std::fmt;
+use std::num::{ParseFloatError, ParseIntError};
 
 #[derive(Default, Debug, Clone, PartialEq)]
 pub enum LexicalError {
+    InvalidInteger(ParseIntError),
+    InvalidFloat(ParseFloatError),
     #[default]
     InvalidToken,
+}
+
+impl From<ParseIntError> for LexicalError {
+    fn from(err: ParseIntError) -> Self {
+        LexicalError::InvalidInteger(err)
+    }
+}
+
+impl From<ParseFloatError> for LexicalError {
+    fn from(err: ParseFloatError) -> Self {
+        LexicalError::InvalidFloat(err)
+    }
 }
 
 #[derive(Logos, Debug, PartialEq)]
@@ -97,12 +112,12 @@ pub enum Token {
     #[token("@")]
     At,
 
-    #[regex(r"[A-Za-z_][A-Za-z0-9_]*")]
-    Id,
-    #[regex(r"[1-9][0-9]*|0")]
-    Integer,
-    #[regex(r"([0-9]+\.[0-9]*|[0-9]*\.[0-9]+)([eE][+-]?[0-9]+)?")]
-    Double,
+    #[regex(r"[A-Za-z_][A-Za-z0-9_]*", |lex| lex.slice().to_string())]
+    Id(String),
+    #[regex(r"[1-9][0-9]*|0", |lex| lex.slice().parse())]
+    Integer(i32),
+    #[regex(r"[0-9]+\.[0-9]*([eE][+-]?[0-9]+)?", |lex| lex.slice().parse())]
+    Double(f64),
 }
 
 impl fmt::Display for Token {

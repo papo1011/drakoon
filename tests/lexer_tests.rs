@@ -93,7 +93,13 @@ fn test_identifiers() {
 
     assert_eq!(
         tokens,
-        vec![Token::Id, Token::Id, Token::Id, Token::Id, Token::Id,]
+        vec![
+            Token::Id("hello".into()),
+            Token::Id("world".into()),
+            Token::Id("_var".into()),
+            Token::Id("var123".into()),
+            Token::Id("_123abc".into())
+        ]
     );
 }
 
@@ -106,29 +112,29 @@ fn test_integers() {
     assert_eq!(
         tokens,
         vec![
-            Token::Integer,
-            Token::Integer,
-            Token::Integer,
-            Token::Integer,
+            Token::Integer(0),
+            Token::Integer(42),
+            Token::Integer(123),
+            Token::Integer(999),
         ]
     );
 }
 
 #[test]
 fn test_doubles() {
-    let source = "3.14 0.5 .25 42.0 1.5e10 2.3E-5";
+    let source = "3.14 0.5 0.25 42.0 1.5e10 2.3E-5";
     let lexer = Lexer::new(source);
     let tokens: Vec<_> = lexer.map(|r| r.unwrap().1).collect();
 
     assert_eq!(
         tokens,
         vec![
-            Token::Double,
-            Token::Double,
-            Token::Double,
-            Token::Double,
-            Token::Double,
-            Token::Double,
+            Token::Double(3.14),
+            Token::Double(0.5),
+            Token::Double(0.25),
+            Token::Double(42.0),
+            Token::Double(1.5e10),
+            Token::Double(2.3E-5)
         ]
     );
 }
@@ -143,12 +149,12 @@ fn test_simple_function() {
         tokens,
         vec![
             Token::Fn,
-            Token::Id,
+            Token::Id("main".to_string()),
             Token::LParen,
             Token::RParen,
             Token::LBrace,
             Token::Return,
-            Token::Integer,
+            Token::Integer(42),
             Token::Semicolon,
             Token::RBrace,
         ]
@@ -165,7 +171,7 @@ fn test_whitespace_skipping() {
         tokens,
         vec![
             Token::Fn,
-            Token::Id,
+            Token::Id("main".to_string()),
             Token::Newline,
             Token::LParen,
             Token::Newline,
@@ -195,7 +201,7 @@ fn test_single_line_comments() {
         vec![
             Token::Newline,
             Token::Fn,
-            Token::Id,
+            Token::Id("get_num".to_string()),
             Token::LParen,
             Token::RParen,
             Token::Arrow,
@@ -204,12 +210,12 @@ fn test_single_line_comments() {
             Token::LBrace,
             Token::Newline,
             Token::Let,
-            Token::Id,
+            Token::Id("x".to_string()),
             Token::Assign,
-            Token::Integer,
+            Token::Integer(42),
             Token::Newline,
             Token::Return,
-            Token::Id,
+            Token::Id("x".to_string()),
             Token::Newline,
             Token::RBrace,
             Token::Newline,
@@ -235,7 +241,7 @@ fn test_doc_comments() {
             Token::Newline,
             Token::Newline,
             Token::Fn,
-            Token::Id,
+            Token::Id("example".to_string()),
             Token::LParen,
             Token::RParen,
             Token::Arrow,
@@ -244,9 +250,9 @@ fn test_doc_comments() {
             Token::Newline,
             Token::Newline,
             Token::Let,
-            Token::Id,
+            Token::Id("x".to_string()),
             Token::Assign,
-            Token::Integer,
+            Token::Integer(5),
             Token::Newline,
             Token::RBrace,
             Token::Newline,
@@ -270,7 +276,7 @@ fn test_token_positions() {
 
     // Check second token (main)
     let (start, token, end) = results[1].as_ref().unwrap();
-    assert_eq!(*token, Token::Id);
+    assert_eq!(*token, Token::Id("main".to_string()));
     assert_eq!(*start, 3);
     assert_eq!(*end, 7);
 }
@@ -295,7 +301,7 @@ fn test_multiline_positions() {
 
     // Check third token: main - on line 2
     let (start, token, end) = results[2].as_ref().unwrap();
-    assert_eq!(*token, Token::Id);
+    assert_eq!(*token, Token::Id("main".to_string()));
     assert_eq!(*start, 3);
     assert_eq!(*end, 7);
 
@@ -328,15 +334,15 @@ fn test_complex_expression() {
         tokens,
         vec![
             Token::Let,
-            Token::Id, // exp
+            Token::Id("exp".to_string()),
             Token::Assign,
             Token::LParen,
-            Token::Id, // x
+            Token::Id("x".to_string()),
             Token::Plus,
-            Token::Id, // y
+            Token::Id("y".to_string()),
             Token::RParen,
             Token::Mul,
-            Token::Double, // 2.5
+            Token::Double(2.5),
         ]
     );
 }
