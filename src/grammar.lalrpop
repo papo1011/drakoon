@@ -8,10 +8,10 @@ pub Script: Vec<ast::Statement> = {
 }
 
 pub Statement: ast::Statement = {
-  "let" <name:"identifier"> "=" <value:Expression> "newline" => {
+  "let" <name:"identifier"> "=" <value:Expression>  => {
     ast::Statement::Variable { name, value }
   },
-  "println" <value:Expression> "newline" => {
+  "println" <value:Expression>  => {
     ast::Statement::Print { value }
   },
 }
@@ -111,6 +111,5 @@ extern {
         ")" => Token::RParen,
         "." => Token::Dot,
         "@" => Token::At,
-        "newline" => Token::Newline,
     }
 }

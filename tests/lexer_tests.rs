@@ -172,13 +172,9 @@ fn test_whitespace_skipping() {
         vec![
             Token::Fn,
             Token::Id("main".to_string()),
-            Token::Newline,
             Token::LParen,
-            Token::Newline,
             Token::RParen,
-            Token::Newline,
             Token::LBrace,
-            Token::Newline,
             Token::RBrace,
         ]
     );
@@ -199,26 +195,20 @@ fn test_single_line_comments() {
     assert_eq!(
         tokens,
         vec![
-            Token::Newline,
             Token::Fn,
             Token::Id("get_num".to_string()),
             Token::LParen,
             Token::RParen,
             Token::Arrow,
             Token::IntType,
-            Token::Newline,
             Token::LBrace,
-            Token::Newline,
             Token::Let,
             Token::Id("x".to_string()),
             Token::Assign,
             Token::Integer(42),
-            Token::Newline,
             Token::Return,
             Token::Id("x".to_string()),
-            Token::Newline,
             Token::RBrace,
-            Token::Newline,
         ]
     );
 }
@@ -238,8 +228,6 @@ fn test_doc_comments() {
     assert_eq!(
         tokens,
         vec![
-            Token::Newline,
-            Token::Newline,
             Token::Fn,
             Token::Id("example".to_string()),
             Token::LParen,
@@ -247,15 +235,11 @@ fn test_doc_comments() {
             Token::Arrow,
             Token::UnitType,
             Token::LBrace,
-            Token::Newline,
-            Token::Newline,
             Token::Let,
             Token::Id("x".to_string()),
             Token::Assign,
             Token::Integer(5),
-            Token::Newline,
             Token::RBrace,
-            Token::Newline,
         ]
     );
 }
@@ -293,32 +277,20 @@ fn test_multiline_positions() {
     assert_eq!(*start, 0);
     assert_eq!(*end, 2);
 
-    // Check second token: \n - on line 1
+    // Check second token: main - on line 2
     let (start, token, end) = results[1].as_ref().unwrap();
-    assert_eq!(*token, Token::Newline);
-    assert_eq!(*start, 2);
-    assert_eq!(*end, 3);
-
-    // Check third token: main - on line 2
-    let (start, token, end) = results[2].as_ref().unwrap();
     assert_eq!(*token, Token::Id("main".to_string()));
     assert_eq!(*start, 3);
     assert_eq!(*end, 7);
 
-    // Check fourth token: \n - on line 2
-    let (start, token, end) = results[3].as_ref().unwrap();
-    assert_eq!(*token, Token::Newline);
-    assert_eq!(*start, 7);
-    assert_eq!(*end, 8);
-
-    // Check fifth token: ( - on line 3
-    let (start, token, end) = results[4].as_ref().unwrap();
+    // Check third token: ( - on line 3
+    let (start, token, end) = results[2].as_ref().unwrap();
     assert_eq!(*token, Token::LParen);
     assert_eq!(*start, 8);
     assert_eq!(*end, 9);
 
-    // Check sixth token: ) - on line 3
-    let (start, token, end) = results[5].as_ref().unwrap();
+    // Check fourth token: ) - on line 3
+    let (start, token, end) = results[3].as_ref().unwrap();
     assert_eq!(*token, Token::RParen);
     assert_eq!(*start, 9);
     assert_eq!(*end, 10);

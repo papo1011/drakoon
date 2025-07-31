@@ -23,11 +23,8 @@ impl From<ParseFloatError> for LexicalError {
 }
 
 #[derive(Logos, Clone, Debug, PartialEq)]
-#[logos(skip r"[ \t\f]+", skip r"//[^\n]*",skip r"///[^\n]*", skip r"///\|[^\n]*", error = LexicalError)]
+#[logos(skip r"[ \t\n\f]+", skip r"//[^\n]*",skip r"///[^\n]*", skip r"///\|[^\n]*", error = LexicalError)]
 pub enum Token {
-    #[regex(r"\n")]
-    Newline,
-
     #[token("fn")]
     Fn,
     #[token("return")]
