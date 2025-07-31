@@ -22,7 +22,7 @@ impl From<ParseFloatError> for LexicalError {
     }
 }
 
-#[derive(Logos, Debug, PartialEq)]
+#[derive(Logos, Clone, Debug, PartialEq)]
 #[logos(skip r"[ \t\f]+", skip r"//[^\n]*",skip r"///[^\n]*", skip r"///\|[^\n]*", error = LexicalError)]
 pub enum Token {
     #[regex(r"\n")]

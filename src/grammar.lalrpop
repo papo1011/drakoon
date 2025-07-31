@@ -1,0 +1,116 @@
+use crate::tokens::{Token, LexicalError};
+use crate::ast;
+
+grammar;
+
+pub Script: Vec<ast::Statement> = {
+  <stmts:Statement*> => stmts
+}
+
+pub Statement: ast::Statement = {
+  "let" <name:"identifier"> "=" <value:Expression> "newline" => {
+    ast::Statement::Variable { name, value }
+  },
+  "println" <value:Expression> "newline" => {
+    ast::Statement::Print { value }
+  },
+}
+
+pub Expression: Box<ast::Expression> = {
+  #[precedence(level="1")]
+  Term,
+
+  #[precedence(level="2")] #[assoc(side="left")]
+  <lhs:Expression> "*" <rhs:Expression> => {
+    Box::new(ast::Expression::BinaryOperation {
+      lhs,
+      operator: ast::Operator::Mul,
+      rhs
+    })
+  },
+  <lhs:Expression> "/" <rhs:Expression> => {
+    Box::new(ast::Expression::BinaryOperation {
+      lhs,
+      operator: ast::Operator::Div,
+      rhs
+    })
+  },
+
+  #[precedence(level="3")] #[assoc(side="left")]
+  <lhs:Expression> "+" <rhs:Expression> => {
+    Box::new(ast::Expression::BinaryOperation {
+      lhs,
+      operator: ast::Operator::Add,
+      rhs
+    })
+  },
+  <lhs:Expression> "-" <rhs:Expression> => {
+    Box::new(ast::Expression::BinaryOperation {
+      lhs,
+      operator: ast::Operator::Sub,
+      rhs
+    })
+  },
+}
+
+pub Term: Box<ast::Expression> = {
+  <val:"integer"> => {
+    Box::new(ast::Expression::Integer(val))
+  },
+  <name:"identifier"> => {
+    Box::new(ast::Expression::Variable(name))
+  },
+  "(" <Expression> ")",
+}
+
+
+extern {
+    type Location = usize;
+    type Error = LexicalError;
+
+    enum Token {
+        "identifier" => Token::Id(<String>),
+        "integer" => Token::Integer(<i32>),
+        "double" => Token::Double(<f64>),
+        "fn" => Token::Fn,
+        "return" => Token::Return,
+        "println" => Token::Println,
+        "let" => Token::Let,
+        "const" => Token::Const,
+        "while" => Token::While,
+        "for" => Token::For,
+        "if" => Token::If,
+        "else" => Token::Else,
+        "Int" => Token::IntType,
+        "Double" => Token::DoubleType,
+        "Unit" => Token::UnitType,
+        "==" => Token::Eq,
+        "!=" => Token::Neq,
+        "<=" => Token::Le,
+        ">=" => Token::Ge,
+        "&&" => Token::And,
+        "||" => Token::Or,
+        "->" => Token::Arrow,
+        "::" => Token::DoubleColon,
+        "=>" => Token::FatArrow,
+        "=" => Token::Assign,
+        "<" => Token::Lt,
+        ">" => Token::Gt,
+        "+" => Token::Plus,
+        "-" => Token::Minus,
+        "*" => Token::Mul,
+        "/" => Token::Div,
+        "%" => Token::Mod,
+        "!" => Token::Not,
+        ":" => Token::Col,
+        ";" => Token::Semicolon,
+        "," => Token::Comma,
+        "{" => Token::LBrace,
+        "}" => Token::RBrace,
+        "(" => Token::LParen,
+        ")" => Token::RParen,
+        "." => Token::Dot,
+        "@" => Token::At,
+        "newline" => Token::Newline,
+    }
+}
