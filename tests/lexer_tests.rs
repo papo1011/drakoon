@@ -1,5 +1,4 @@
-use drakoon::lexer::Lexer;
-use drakoon::tokens::Token;
+use drakoon::{lexer::Lexer, tokens::Token};
 
 #[test]
 fn test_keywords() {

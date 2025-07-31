@@ -1,16 +1,9 @@
-mod ast;
 mod cli;
-mod lexer;
-mod tokens;
 
 use clap::Parser;
 use cli::Cli;
-use grammar::ScriptParser;
-use lalrpop_util::lalrpop_mod;
-use lexer::Lexer;
+use drakoon::{grammar::ScriptParser, lexer::Lexer};
 use std::fs;
-
-lalrpop_mod!(grammar);
 
 fn main() {
     let args = Cli::parse();
@@ -26,7 +19,6 @@ fn main() {
     println!("Lexing file: {:?}", args.file);
 
     let lexer = Lexer::new(&source);
-
     let parser = ScriptParser::new();
     let ast = parser.parse(lexer).unwrap();
 
