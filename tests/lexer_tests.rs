@@ -2,7 +2,7 @@ use drakoon::{lexer::Lexer, tokens::Token};
 
 #[test]
 fn test_keywords() {
-    let source = "fn return println let const while for if else";
+    let source = "fn return println let const mut while for if else";
     let lexer = Lexer::new(source);
     let tokens: Vec<_> = lexer.map(|r| r.unwrap().1).collect();
 
@@ -14,6 +14,7 @@ fn test_keywords() {
             Token::Println,
             Token::Let,
             Token::Const,
+            Token::Mutable,
             Token::While,
             Token::For,
             Token::If,

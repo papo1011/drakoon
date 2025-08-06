@@ -45,6 +45,9 @@ pub enum Token {
     #[token("const")]
     Const,
 
+    #[token("mut")]
+    Mutable,
+
     #[token("while")]
     While,
     #[token("for")]
