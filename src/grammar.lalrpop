@@ -57,6 +57,9 @@ pub Term: Box<ast::Expression> = {
   <val:"integer"> => {
     Box::new(ast::Expression::Integer(val))
   },
+  <val:"double"> => {
+    Box::new(ast::Expression::Double(val))
+  },
   <name:"identifier"> => {
     Box::new(ast::Expression::Variable(name))
   },

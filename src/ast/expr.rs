@@ -12,6 +12,7 @@ pub enum Statement {
 #[derive(Clone, Debug, PartialEq)]
 pub enum Expression {
     Integer(i32),
+    Double(f64),
     Variable(String),
     BinaryOperation {
         lhs: Box<Expression>,
