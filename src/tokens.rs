@@ -46,7 +46,7 @@ pub enum Token {
     Const,
 
     #[token("mut")]
-    Mutable,
+    Mut,
 
     #[token("while")]
     While,
@@ -115,7 +115,7 @@ pub enum Token {
     #[regex(r"[A-Za-z_][A-Za-z0-9_]*", |lex| lex.slice().to_string())]
     Id(String),
     #[regex(r"[1-9][0-9]*|0", |lex| lex.slice().parse())]
-    Integer(i32),
+    Int(i32),
     #[regex(r"[0-9]+\.[0-9]*([eE][+-]?[0-9]+)?", |lex| lex.slice().parse())]
     Double(f64),
 }

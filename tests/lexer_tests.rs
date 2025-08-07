@@ -14,7 +14,7 @@ fn test_keywords() {
             Token::Println,
             Token::Let,
             Token::Const,
-            Token::Mutable,
+            Token::Mut,
             Token::While,
             Token::For,
             Token::If,
@@ -112,10 +112,10 @@ fn test_integers() {
     assert_eq!(
         tokens,
         vec![
-            Token::Integer(0),
-            Token::Integer(42),
-            Token::Integer(123),
-            Token::Integer(999),
+            Token::Int(0),
+            Token::Int(42),
+            Token::Int(123),
+            Token::Int(999),
         ]
     );
 }
@@ -154,7 +154,7 @@ fn test_simple_function() {
             Token::RParen,
             Token::LBrace,
             Token::Return,
-            Token::Integer(42),
+            Token::Int(42),
             Token::Semicolon,
             Token::RBrace,
         ]
@@ -205,7 +205,7 @@ fn test_single_line_comments() {
             Token::Let,
             Token::Id("x".to_string()),
             Token::Assign,
-            Token::Integer(42),
+            Token::Int(42),
             Token::Return,
             Token::Id("x".to_string()),
             Token::RBrace,
@@ -238,7 +238,7 @@ fn test_doc_comments() {
             Token::Let,
             Token::Id("x".to_string()),
             Token::Assign,
-            Token::Integer(5),
+            Token::Int(5),
             Token::RBrace,
         ]
     );

@@ -8,7 +8,7 @@ pub Script: Vec<ast::Statement> = {
 }
 
 pub Statement: ast::Statement = {
-  "let" <name:"identifier"> "=" <value:Expression>  => {
+  "let" <name:"id"> "=" <value:Expression>  => {
     ast::Statement::Variable { name, value }
   },
   "println" <value:Expression>  => {
@@ -54,13 +54,13 @@ pub Expression: Box<ast::Expression> = {
 }
 
 pub Term: Box<ast::Expression> = {
-  <val:"integer"> => {
-    Box::new(ast::Expression::Integer(val))
+  <val:"int"> => {
+    Box::new(ast::Expression::Int(val))
   },
   <val:"double"> => {
     Box::new(ast::Expression::Double(val))
   },
-  <name:"identifier"> => {
+  <name:"id"> => {
     Box::new(ast::Expression::Variable(name))
   },
   "(" <Expression> ")",
@@ -72,14 +72,15 @@ extern {
     type Error = LexicalError;
 
     enum Token {
-        "identifier" => Token::Id(<String>),
-        "integer" => Token::Integer(<i32>),
+        "id" => Token::Id(<String>),
+        "int" => Token::Int(<i32>),
         "double" => Token::Double(<f64>),
         "fn" => Token::Fn,
         "return" => Token::Return,
         "println" => Token::Println,
         "let" => Token::Let,
         "const" => Token::Const,
+        "mut" => Token::Mut,
         "while" => Token::While,
         "for" => Token::For,
         "if" => Token::If,

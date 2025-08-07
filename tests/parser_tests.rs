@@ -12,7 +12,7 @@ fn expr_int() {
     let expr = ScriptParser::new().parse(lexer).unwrap();
     assert_eq!(
         &format!("{:?}", expr),
-        "[Variable { name: \"a\", value: Integer(42) }, Variable { name: \"b\", value: Integer(23) }, Print { value: BinaryOperation { lhs: Variable(\"a\"), operator: Add, rhs: Variable(\"b\") } }]"
+        "[Variable { name: \"a\", value: Int(42) }, Variable { name: \"b\", value: Int(23) }, Print { value: BinaryOperation { lhs: Variable(\"a\"), operator: Add, rhs: Variable(\"b\") } }]"
     );
 }
 

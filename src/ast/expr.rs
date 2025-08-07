@@ -11,7 +11,7 @@ pub enum Statement {
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum Expression {
-    Integer(i32),
+    Int(i32),
     Double(f64),
     Variable(String),
     BinaryOperation {
