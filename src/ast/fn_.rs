@@ -1,4 +1,4 @@
-use super::Stmt;
+use super::{Stmt, Type};
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Param {
