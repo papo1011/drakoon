@@ -1,17 +1,17 @@
 #[derive(Clone, Debug, PartialEq)]
-pub enum Expression {
+pub enum Expr {
     Int(i32),
     Double(f64),
-    Variable(String),
-    BinaryOperation {
-        lhs: Box<Expression>,
-        operator: Operator,
-        rhs: Box<Expression>,
+    Var(String),
+    BinaryOp {
+        lhs: Box<Expr>,
+        operator: Op,
+        rhs: Box<Expr>,
     },
 }
 
 #[derive(Clone, Debug, PartialEq)]
-pub enum Operator {
+pub enum Op {
     Add,
     Sub,
     Mul,

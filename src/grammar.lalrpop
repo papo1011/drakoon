@@ -3,67 +3,67 @@ use crate::ast;
 
 grammar;
 
-pub Script: Vec<ast::Statement> = {
-  <stmts:Statement*> => stmts
+pub Script: Vec<ast::Stmt> = {
+  <stmts:Stmt*> => stmts
 }
 
-pub Statement: ast::Statement = {
-  "let" <name:"id"> "=" <value:Expression>  => {
-    ast::Statement::Variable { name, value }
+pub Stmt: ast::Stmt = {
+  "let" <name:"id"> "=" <value:Expr>  => {
+    ast::Stmt::Var { name, value }
   },
-  "println" <value:Expression>  => {
-    ast::Statement::Print { value }
+  "println" <value:Expr>  => {
+    ast::Stmt::Print { value }
   },
 }
 
-pub Expression: Box<ast::Expression> = {
+pub Expr: Box<ast::Expr> = {
   #[precedence(level="1")]
   Term,
 
   #[precedence(level="2")] #[assoc(side="left")]
-  <lhs:Expression> "*" <rhs:Expression> => {
-    Box::new(ast::Expression::BinaryOperation {
+  <lhs:Expr> "*" <rhs:Expr> => {
+    Box::new(ast::Expr::BinaryOp {
       lhs,
-      operator: ast::Operator::Mul,
+      operator: ast::Op::Mul,
       rhs
     })
   },
-  <lhs:Expression> "/" <rhs:Expression> => {
-    Box::new(ast::Expression::BinaryOperation {
+  <lhs:Expr> "/" <rhs:Expr> => {
+    Box::new(ast::Expr::BinaryOp {
       lhs,
-      operator: ast::Operator::Div,
+      operator: ast::Op ::Div,
       rhs
     })
   },
 
   #[precedence(level="3")] #[assoc(side="left")]
-  <lhs:Expression> "+" <rhs:Expression> => {
-    Box::new(ast::Expression::BinaryOperation {
+  <lhs:Expr> "+" <rhs:Expr> => {
+    Box::new(ast::Expr::BinaryOp {
       lhs,
-      operator: ast::Operator::Add,
+      operator: ast::Op::Add,
       rhs
     })
   },
-  <lhs:Expression> "-" <rhs:Expression> => {
-    Box::new(ast::Expression::BinaryOperation {
+  <lhs:Expr> "-" <rhs:Expr> => {
+    Box::new(ast::Expr::BinaryOp {
       lhs,
-      operator: ast::Operator::Sub,
+      operator: ast::Op::Sub,
       rhs
     })
   },
 }
 
-pub Term: Box<ast::Expression> = {
+pub Term: Box<ast::Expr> = {
   <val:"int"> => {
-    Box::new(ast::Expression::Int(val))
+    Box::new(ast::Expr::Int(val))
   },
   <val:"double"> => {
-    Box::new(ast::Expression::Double(val))
+    Box::new(ast::Expr::Double(val))
   },
   <name:"id"> => {
-    Box::new(ast::Expression::Variable(name))
+    Box::new(ast::Expr::Var(name))
   },
-  "(" <Expression> ")",
+  "(" <Expr> ")",
 }
 
 

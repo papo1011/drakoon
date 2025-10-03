@@ -1,12 +1,7 @@
-use super::expr::Expression;
+use super::expr::Expr;
 
 #[derive(Clone, Debug, PartialEq)]
-pub enum Statement {
-    Variable {
-        name: String,
-        value: Box<Expression>,
-    },
-    Print {
-        value: Box<Expression>,
-    },
+pub enum Stmt {
+    Var { name: String, value: Box<Expr> },
+    Print { value: Box<Expr> },
 }

@@ -12,7 +12,7 @@ fn expr_int() {
     let expr = ScriptParser::new().parse(lexer).unwrap();
     assert_eq!(
         &format!("{:?}", expr),
-        "[Variable { name: \"a\", value: Int(42) }, Variable { name: \"b\", value: Int(23) }, Print { value: BinaryOperation { lhs: Variable(\"a\"), operator: Add, rhs: Variable(\"b\") } }]"
+        "[Var { name: \"a\", value: Int(42) }, Var { name: \"b\", value: Int(23) }, Print { value: BinaryOp { lhs: Var(\"a\"), operator: Add, rhs: Var(\"b\") } }]"
     );
 }
 
@@ -28,6 +28,6 @@ fn expr_double() {
     let expr = ScriptParser::new().parse(lexer).unwrap();
     assert_eq!(
         &format!("{:?}", expr),
-        "[Variable { name: \"a\", value: Double(42.3) }, Variable { name: \"b\", value: Double(23.7) }, Print { value: BinaryOperation { lhs: Variable(\"a\"), operator: Add, rhs: Variable(\"b\") } }]"
+        "[Var { name: \"a\", value: Double(42.3) }, Var { name: \"b\", value: Double(23.7) }, Print { value: BinaryOp { lhs: Var(\"a\"), operator: Add, rhs: Var(\"b\") } }]"
     );
 }
