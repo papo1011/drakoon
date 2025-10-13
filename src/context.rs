@@ -52,4 +52,16 @@ impl Context {
         self.tmp_count += 1;
         register
     }
+
+    pub fn enter_scope(&mut self) {
+        self.scopes.push(Scope::default());
+    }
+
+    pub fn leave_scope(&mut self) {
+        self.scopes.pop();
+    }
+
+    pub fn current_scope_mut(&mut self) -> &mut Scope {
+        self.scopes.last_mut().expect("No scope available")
+    }
 }
