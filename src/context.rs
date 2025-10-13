@@ -12,7 +12,7 @@ pub struct Context {
     pub output: String,
     pub errors: String,
     pub sem_errors: u32,
-    pub temp_count: u32,
+    pub tmp_count: u32,
     pub started_main: bool,
 }
 
@@ -23,8 +23,33 @@ impl Context {
             output: String::new(),
             errors: String::new(),
             sem_errors: 0,
-            temp_count: 0,
+            tmp_count: 0,
             started_main: false,
         }
+    }
+
+    pub fn append(&mut self, s: &str) {
+        self.output.push_str("  ");
+        self.output.push_str(s);
+        self.output.push('\n');
+    }
+
+    pub fn start_main(&mut self) {
+        self.append("define i32 @main() {");
+        self.started_main = true;
+    }
+
+    pub fn end_main(&mut self) {
+        if self.started_main {
+            self.append("ret i32 0");
+            self.append("}");
+        }
+    }
+
+    /// Generate a new temporary register name to guarantee uniqueness
+    pub fn new_tmp(&mut self) -> String {
+        let register = format!("%t{}", self.tmp_count);
+        self.tmp_count += 1;
+        register
     }
 }
