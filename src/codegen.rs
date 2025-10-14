@@ -1,6 +1,6 @@
 use std::{collections::HashMap, vec};
 
-use crate::types::{Type, Value, ValueObj};
+use crate::types::{Type, Value, ValueObj, types_compatible};
 
 #[derive(Default)]
 pub struct Scope {
@@ -134,5 +134,84 @@ impl CodeGenContext {
             addr.ty.align()
         ));
         Value::new_val(tmp, addr.ty.clone())
+    }
+
+    pub fn store_scalar(&mut self, dst_addr: &Value, src_val: &Value) {
+        let rhs = self.rvalue(src_val);
+        if !types_compatible(&dst_addr.ty, &rhs.ty) {
+            self.error(&format!(
+                "Type mismatch in store: {} <- {}",
+                dst_addr.ty, rhs.ty
+            ));
+        }
+        self.append(&format!(
+            "store {} {}, {}* {}, align {}",
+            dst_addr.ty.llvm(),
+            rhs.repr,
+            dst_addr.ty.llvm(),
+            dst_addr.repr,
+            dst_addr.ty.align()
+        ));
+    }
+
+    /// Allocates space on the stack for a variable of the given type and returns its address as a Value.
+    pub fn alloca_of_type(&mut self, name: &str, ty: &Type) -> Value {
+        let repr = format!("%{}", name);
+        self.append(&format!(
+            "{} = alloca {}, align {}",
+            repr,
+            ty.llvm(),
+            ty.align()
+        ));
+        Value::new_addr(repr, ty.clone())
+    }
+
+    pub fn declare_local(
+        &mut self,
+        name: String,
+        annot: Option<Type>,
+        init: Option<Value>,
+        mutable: bool,
+    ) {
+        // Check for redeclaration only in the current scope
+        // Allow shadowing of outer scopes
+        if self.scopes.last().unwrap().vars.contains_key(&name) {
+            self.error(&format!(
+                "Variable '{}' already declared in this scope",
+                name
+            ));
+            return;
+        }
+
+        let (ty, init_val) = match (annot.clone(), init) {
+            (Some(t), Some(v)) => {
+                if !types_compatible(&t, &v.ty) {
+                    self.error(&format!(
+                        "Type mismatch in declaration of '{}': {} vs {}",
+                        name, t, v.ty
+                    ));
+                }
+                (t, Some(v))
+            }
+            (Some(t), None) => (t, None),
+            (None, Some(v)) => (v.ty.clone(), Some(v)),
+            (None, None) => {
+                self.error(&format!(
+                    "Declaration of '{}' requires type or initializer",
+                    name
+                ));
+                (Type::Unknown, None)
+            }
+        };
+        let addr = self.alloca_of_type(&name, &ty);
+        if let Some(init_v) = init_val {
+            self.store_scalar(&addr, &init_v);
+        }
+        let vo = ValueObj {
+            name: name.clone(),
+            val: addr,
+            mutable,
+        };
+        self.current_scope_mut().vars.insert(name, vo);
     }
 }

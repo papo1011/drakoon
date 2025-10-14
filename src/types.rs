@@ -1,3 +1,5 @@
+use std::fmt;
+
 #[derive(Debug, Clone, PartialEq)]
 pub enum Type {
     Unknown,
@@ -39,6 +41,18 @@ impl Type {
     }
 }
 
+impl fmt::Display for Type {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Type::Unknown => write!(f, "unknown"),
+            Type::Int => write!(f, "Int"),
+            Type::Double => write!(f, "Double"),
+            Type::Unit => write!(f, "Unit"),
+            Type::Array(t, n) => write!(f, "[{}; {}]", t, n),
+        }
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct Value {
     pub repr: String, // LLVM textual operand: "%t3", "1", "%a", etc.
@@ -68,4 +82,15 @@ pub struct ValueObj {
     pub name: String,
     pub val: Value,
     pub mutable: bool,
+}
+
+pub fn types_compatible(target: &Type, source: &Type) -> bool {
+    match (target, source) {
+        (Type::Unknown, _) | (_, Type::Unknown) => true,
+        (Type::Int, Type::Int) => true,
+        (Type::Double, Type::Double) => true,
+        (Type::Unit, Type::Unit) => true,
+        (Type::Array(t1, n1), Type::Array(t2, n2)) => n1 == n2 && types_compatible(t1, t2),
+        _ => false,
+    }
 }
