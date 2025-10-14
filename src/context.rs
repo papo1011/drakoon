@@ -1,6 +1,6 @@
 use std::{collections::HashMap, vec};
 
-use crate::types::ValueObj;
+use crate::types::{Type, Value, ValueObj};
 
 #[derive(Default)]
 pub struct Scope {
@@ -89,5 +89,50 @@ impl Context {
             }
         }
         None
+    }
+
+    /// A left-hand value (lvalue) denote a memory address
+    /// This function looks up a variable and returns its address Value
+    ///
+    /// If not found, it reports an error and returns a dummy Value
+    pub fn lookup_lvalue(&mut self, name: &str) -> Value {
+        if let Some(v) = self.lookup(name) {
+            return v.val.clone();
+        }
+        self.error(&format!("Use of undeclared variable '{}'", name));
+        Value::new_addr("%undef", Type::Unknown)
+    }
+
+    /// A right-hand value (rvalue) is a value used in expressions
+    /// If the input Value is an address, it generates a load instruction to get the actual value
+    /// If the input Value is already a value, it returns it as is.
+    ///
+    /// If the input Value is an address of an array, it reports an error since arrays
+    /// cannot be used directly in expressions.
+    pub fn rvalue(&mut self, v: &Value) -> Value {
+        if v.is_addr {
+            if matches!(v.ty, Type::Array(_, _)) {
+                self.error(
+                    "Cannot use array value directly in expression; index it or pass its address.",
+                );
+                return Value::new_val("%undef", Type::Unknown);
+            }
+            self.load_scalar(v)
+        } else {
+            v.clone()
+        }
+    }
+
+    pub fn load_scalar(&mut self, addr: &Value) -> Value {
+        let tmp = self.new_tmp();
+        self.append(&format!(
+            "{} = load {}, {}* {}, align {}",
+            tmp,
+            addr.ty.llvm(),
+            addr.ty.llvm(),
+            addr.repr,
+            addr.ty.align()
+        ));
+        Value::new_val(tmp, addr.ty.clone())
     }
 }
