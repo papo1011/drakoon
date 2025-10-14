@@ -34,6 +34,13 @@ impl Context {
         self.output.push('\n');
     }
 
+    pub fn error(&mut self, msg: &str) {
+        self.errors.push_str("SEMANTIC ERROR: ");
+        self.errors.push_str(msg);
+        self.errors.push('\n');
+        self.sem_errors += 1;
+    }
+
     pub fn start_main(&mut self) {
         self.append("define i32 @main() {");
         self.started_main = true;
@@ -63,5 +70,24 @@ impl Context {
 
     pub fn current_scope_mut(&mut self) -> &mut Scope {
         self.scopes.last_mut().expect("No scope available")
+    }
+
+    /// Look up a variable by name, searching from the innermost scope outward
+    pub fn lookup(&self, name: &str) -> Option<&ValueObj> {
+        for s in self.scopes.iter().rev() {
+            if let Some(v) = s.vars.get(name) {
+                return Some(v);
+            }
+        }
+        None
+    }
+
+    pub fn lookup_mut(&mut self, name: &str) -> Option<&mut ValueObj> {
+        for s in self.scopes.iter_mut().rev() {
+            if let Some(v) = s.vars.get_mut(name) {
+                return Some(v);
+            }
+        }
+        None
     }
 }
