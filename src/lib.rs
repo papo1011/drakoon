@@ -1,5 +1,5 @@
 pub mod ast;
-pub mod context;
+pub mod codegen;
 pub mod lexer;
 pub mod parser;
 pub mod tokens;

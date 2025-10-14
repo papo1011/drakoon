@@ -7,7 +7,7 @@ pub struct Scope {
     pub vars: HashMap<String, ValueObj>,
 }
 
-pub struct Context {
+pub struct CodeGenContext {
     pub scopes: Vec<Scope>,
     pub output: String,
     pub errors: String,
@@ -16,7 +16,7 @@ pub struct Context {
     pub started_main: bool,
 }
 
-impl Context {
+impl CodeGenContext {
     pub fn new() -> Self {
         Self {
             scopes: vec![Scope::default()],
