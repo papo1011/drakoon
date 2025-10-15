@@ -1,4 +1,5 @@
-use super::{Stmt, Type};
+use super::Stmt;
+use crate::types::Type;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Param {

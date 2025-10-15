@@ -2,7 +2,7 @@ mod cli;
 
 use clap::Parser;
 use cli::Cli;
-use drakoon::{grammar::ScriptParser, lexer::Lexer};
+use drakoon::{codegen::CodeGenContext, grammar::ScriptParser, lexer::Lexer};
 use std::fs;
 
 fn main() {
@@ -16,11 +16,21 @@ fn main() {
     let source = fs::read_to_string(&args.file)
         .unwrap_or_else(|_| panic!("Failed to read file {:?}", args.file));
 
-    println!("Lexing file: {:?}", args.file);
-
     let lexer = Lexer::new(&source);
     let parser = ScriptParser::new();
     let ast = parser.parse(lexer).unwrap();
 
-    println!("{:?}", ast);
+    let mut codegen = CodeGenContext::new();
+    codegen.start_main();
+    for stmt in &ast {
+        codegen.append_stmt(stmt);
+    }
+    codegen.end_main();
+
+    if codegen.sem_errors > 0 {
+        eprintln!("{}", codegen.errors);
+        std::process::exit(1);
+    }
+
+    println!("{}", codegen.output);
 }

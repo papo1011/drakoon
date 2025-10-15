@@ -1,6 +1,8 @@
+use crate::{
+    ast::{Expr, Op, Stmt},
+    types::{Type, Value, ValueObj, types_compatible},
+};
 use std::{collections::HashMap, vec};
-
-use crate::types::{Type, Value, ValueObj, types_compatible};
 
 #[derive(Default)]
 pub struct Scope {
@@ -42,6 +44,9 @@ impl CodeGenContext {
     }
 
     pub fn start_main(&mut self) {
+        if self.started_main {
+            return;
+        }
         self.append("define i32 @main() {");
         self.started_main = true;
     }
@@ -143,6 +148,7 @@ impl CodeGenContext {
                 "Type mismatch in store: {} <- {}",
                 dst_addr.ty, rhs.ty
             ));
+            return;
         }
         self.append(&format!(
             "store {} {}, {}* {}, align {}",
@@ -213,5 +219,69 @@ impl CodeGenContext {
             mutable,
         };
         self.current_scope_mut().vars.insert(name, vo);
+    }
+
+    pub fn append_stmt(&mut self, stmt: &Stmt) {
+        match stmt {
+            Stmt::Var { name, value } => {
+                let init = self.append_expr(value);
+                self.declare_local(name.clone(), None, Some(init), true);
+            }
+            Stmt::Print { value } => {
+                self.append_expr(value);
+            }
+        }
+    }
+
+    pub fn append_expr(&mut self, expr: &Expr) -> Value {
+        match expr {
+            Expr::Int(i) => Value::new_val(i.to_string(), Type::Int),
+            Expr::Double(d) => Value::new_val(format!("{}", d), Type::Double),
+            Expr::Var(name) => {
+                let addr = self.lookup_lvalue(name);
+                self.rvalue(&addr)
+            }
+            Expr::BinaryOp { lhs, operator, rhs } => {
+                let lhs_val = self.append_expr(lhs);
+                let rhs_val = self.append_expr(rhs);
+                self.binop(operator.clone(), &lhs_val, &rhs_val)
+            }
+        }
+    }
+
+    pub fn binop(&mut self, op: Op, lhs: &Value, rhs: &Value) -> Value {
+        let lhs = self.rvalue(lhs);
+        let rhs = self.rvalue(rhs);
+
+        if lhs.ty != rhs.ty {
+            self.error("Type mismatch in binary expression.");
+            return Value::new_val("%undef", Type::Unknown);
+        }
+
+        let instr = match (&lhs.ty, op) {
+            (Type::Int, Op::Add) => "add",
+            (Type::Int, Op::Sub) => "sub",
+            (Type::Int, Op::Mul) => "mul",
+            (Type::Int, Op::Div) => "sdiv",
+            (Type::Double, Op::Add) => "fadd",
+            (Type::Double, Op::Sub) => "fsub",
+            (Type::Double, Op::Mul) => "fmul",
+            (Type::Double, Op::Div) => "fdiv",
+            _ => {
+                self.error("Unsupported operand type for binary expression.");
+                return Value::new_val("%undef", Type::Unknown);
+            }
+        };
+
+        let tmp = self.new_tmp();
+        self.append(&format!(
+            "{} = {} {} {}, {}",
+            tmp,
+            instr,
+            lhs.ty.llvm(),
+            lhs.repr,
+            rhs.repr
+        ));
+        Value::new_val(tmp, lhs.ty)
     }
 }
