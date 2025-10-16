@@ -3,11 +3,15 @@ use crate::types::Type;
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum Stmt {
-    Var {
+    VarDef {
         name: String,
         annot: Option<Type>,
         value: Box<Expr>,
         mutable: bool,
+    },
+    VarAssign {
+        name: String,
+        value: Box<Expr>,
     },
     Print {
         value: Box<Expr>,

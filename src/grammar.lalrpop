@@ -10,6 +10,7 @@ pub Script: Vec<ast::Stmt> = {
 
 pub Stmt: ast::Stmt = {
   StmtVarDef,
+  StmtVarAssign,
   "println" <value:Expr>  => {
     ast::Stmt::Print { value }
   },
@@ -17,16 +18,22 @@ pub Stmt: ast::Stmt = {
 
 pub StmtVarDef: ast::Stmt = {
   "let" <name:"id"> "=" <value:Expr>  => {
-    ast::Stmt::Var { name, annot: None, value, mutable: false }
+    ast::Stmt::VarDef { name, annot: None, value, mutable: false }
   },
   "let" "mut" <name:"id"> "=" <value:Expr>  => {
-    ast::Stmt::Var { name, annot: None, value, mutable: true }
+    ast::Stmt::VarDef { name, annot: None, value, mutable: true }
   },
   "let" <name:"id"> ":" <annot:Type> "=" <value:Expr>  => {
-    ast::Stmt::Var { name, annot: Some(annot), value, mutable: false }
+    ast::Stmt::VarDef { name, annot: Some(annot), value, mutable: false }
   },
   "let" "mut" <name:"id"> ":" <annot:Type> "=" <value:Expr>  => {
-    ast::Stmt::Var { name, annot: Some(annot) , value, mutable: true }
+    ast::Stmt::VarDef { name, annot: Some(annot), value, mutable: true }
+  },
+}
+
+pub StmtVarAssign: ast::Stmt = {
+  <name:"id"> "=" <value:Expr> => {
+    ast::Stmt::VarAssign { name, value }
   },
 }
 

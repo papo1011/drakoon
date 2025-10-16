@@ -176,7 +176,13 @@ impl CodeGen {
         Value::new_addr(repr, ty.clone())
     }
 
-    pub fn declare_local(&mut self, name: String, annot: Option<Type>, init: Value, mutable: bool) {
+    pub fn var_definition(
+        &mut self,
+        name: String,
+        annot: Option<Type>,
+        init: Value,
+        mutable: bool,
+    ) {
         if !self.is_name_available(&name) {
             self.error(&format!(
                 "Variable '{}' already declared in this scope",
@@ -188,7 +194,7 @@ impl CodeGen {
         let ty = if let Some(t) = annot {
             if !types_compatible(&t, &init.ty) {
                 self.error(&format!(
-                    "Type mismatch in declaration of '{}': {} vs {}",
+                    "Type mismatch in declaration of '{}': {} <- {}",
                     name, t, init.ty
                 ));
                 return;
@@ -209,16 +215,45 @@ impl CodeGen {
         self.current_scope_mut().vars.insert(name, vo);
     }
 
+    pub fn var_assignment(&mut self, name: &str, value: Value) {
+        let addr = match self.lookup(name) {
+            Some(var) if var.mutable => var.val.clone(),
+            Some(_) => {
+                self.error(&format!("Cannot assign to immutable variable '{}'", name));
+                return;
+            }
+            None => {
+                self.error(&format!("Use of undeclared variable '{}'", name));
+                return;
+            }
+        };
+
+        let rhs = self.rvalue(&value);
+        if !types_compatible(&addr.ty, &rhs.ty) {
+            self.error(&format!(
+                "Type mismatch in assignment to '{}': {} <- {}",
+                name, addr.ty, rhs.ty
+            ));
+            return;
+        }
+
+        self.store_scalar(&addr, &rhs);
+    }
+
     pub fn append_stmt(&mut self, stmt: &Stmt) {
         match stmt {
-            Stmt::Var {
+            Stmt::VarDef {
                 name,
                 annot,
                 value,
                 mutable,
             } => {
                 let init = self.append_expr(value);
-                self.declare_local(name.clone(), annot.clone(), init, *mutable);
+                self.var_definition(name.clone(), annot.clone(), init, *mutable);
+            }
+            Stmt::VarAssign { name, value } => {
+                let val = self.append_expr(value);
+                self.var_assignment(name, val);
             }
             Stmt::Print { value } => {
                 self.append_expr(value);
