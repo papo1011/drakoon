@@ -40,6 +40,7 @@ pub StmtVarAssign: ast::Stmt = {
 pub Type: Type = {
   "Int" => Type::Int,
   "Double" => Type::Double,
+  "Unit" => Type::Unit,
 }
 
 pub Expr: Box<ast::Expr> = {

@@ -2,7 +2,7 @@ use crate::{
     ast::{Expr, Op, Stmt},
     types::{Type, Value, ValueObj, types_compatible},
 };
-use std::{collections::HashMap, vec};
+use std::collections::HashMap;
 
 #[derive(Default)]
 pub struct Scope {

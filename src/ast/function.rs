@@ -8,7 +8,7 @@ pub struct Param {
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct Fn {
+pub struct Function {
     pub name: String,
     pub params: Vec<Param>,
     pub ret: Type,

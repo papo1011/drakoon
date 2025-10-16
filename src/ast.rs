@@ -1,7 +1,7 @@
 mod expr;
-mod fn_;
+mod function;
 mod stmt;
 
 pub use expr::*;
-pub use fn_::*;
+pub use function::*;
 pub use stmt::*;
