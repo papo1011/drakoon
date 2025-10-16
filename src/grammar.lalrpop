@@ -1,5 +1,6 @@
 use crate::tokens::{Token, LexicalError};
 use crate::ast;
+use crate::types::Type;
 
 grammar;
 
@@ -8,12 +9,30 @@ pub Script: Vec<ast::Stmt> = {
 }
 
 pub Stmt: ast::Stmt = {
-  "let" <name:"id"> "=" <value:Expr>  => {
-    ast::Stmt::Var { name, value }
-  },
+  StmtVarDef,
   "println" <value:Expr>  => {
     ast::Stmt::Print { value }
   },
+}
+
+pub StmtVarDef: ast::Stmt = {
+  "let" <name:"id"> "=" <value:Expr>  => {
+    ast::Stmt::Var { name, annot: None, value, mutable: false }
+  },
+  "let" "mut" <name:"id"> "=" <value:Expr>  => {
+    ast::Stmt::Var { name, annot: None, value, mutable: true }
+  },
+  "let" <name:"id"> ":" <annot:Type> "=" <value:Expr>  => {
+    ast::Stmt::Var { name, annot: Some(annot), value, mutable: false }
+  },
+  "let" "mut" <name:"id"> ":" <annot:Type> "=" <value:Expr>  => {
+    ast::Stmt::Var { name, annot: Some(annot) , value, mutable: true }
+  },
+}
+
+pub Type: Type = {
+  "Int" => Type::Int,
+  "Double" => Type::Double,
 }
 
 pub Expr: Box<ast::Expr> = {

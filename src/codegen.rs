@@ -211,9 +211,14 @@ impl CodeGen {
 
     pub fn append_stmt(&mut self, stmt: &Stmt) {
         match stmt {
-            Stmt::Var { name, value } => {
+            Stmt::Var {
+                name,
+                annot,
+                value,
+                mutable,
+            } => {
                 let init = self.append_expr(value);
-                self.declare_local(name.clone(), None, init, true);
+                self.declare_local(name.clone(), annot.clone(), init, *mutable);
             }
             Stmt::Print { value } => {
                 self.append_expr(value);
