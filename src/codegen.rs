@@ -77,6 +77,10 @@ impl CodeGen {
         self.scopes.last_mut().expect("No scope available")
     }
 
+    pub fn is_name_available(&self, name: &str) -> bool {
+        !self.scopes.last().unwrap().vars.contains_key(name)
+    }
+
     /// Look up a variable by name, searching from the innermost scope outward
     pub fn lookup(&self, name: &str) -> Option<&ValueObj> {
         for s in self.scopes.iter().rev() {
@@ -172,16 +176,8 @@ impl CodeGen {
         Value::new_addr(repr, ty.clone())
     }
 
-    pub fn declare_local(
-        &mut self,
-        name: String,
-        annot: Option<Type>,
-        init: Option<Value>,
-        mutable: bool,
-    ) {
-        // Check for redeclaration only in the current scope
-        // Allow shadowing of outer scopes
-        if self.scopes.last().unwrap().vars.contains_key(&name) {
+    pub fn declare_local(&mut self, name: String, annot: Option<Type>, init: Value, mutable: bool) {
+        if !self.is_name_available(&name) {
             self.error(&format!(
                 "Variable '{}' already declared in this scope",
                 name
@@ -189,30 +185,22 @@ impl CodeGen {
             return;
         }
 
-        let (ty, init_val) = match (annot.clone(), init) {
-            (Some(t), Some(v)) => {
-                if !types_compatible(&t, &v.ty) {
-                    self.error(&format!(
-                        "Type mismatch in declaration of '{}': {} vs {}",
-                        name, t, v.ty
-                    ));
-                }
-                (t, Some(v))
-            }
-            (Some(t), None) => (t, None),
-            (None, Some(v)) => (v.ty.clone(), Some(v)),
-            (None, None) => {
+        let ty = if let Some(t) = annot {
+            if !types_compatible(&t, &init.ty) {
                 self.error(&format!(
-                    "Declaration of '{}' requires type or initializer",
-                    name
+                    "Type mismatch in declaration of '{}': {} vs {}",
+                    name, t, init.ty
                 ));
-                (Type::Unknown, None)
+                return;
             }
+            t
+        } else {
+            init.ty.clone()
         };
+
         let addr = self.alloca_of_type(&name, &ty);
-        if let Some(init_v) = init_val {
-            self.store_scalar(&addr, &init_v);
-        }
+        self.store_scalar(&addr, &init);
+
         let vo = ValueObj {
             name: name.clone(),
             val: addr,
@@ -225,7 +213,7 @@ impl CodeGen {
         match stmt {
             Stmt::Var { name, value } => {
                 let init = self.append_expr(value);
-                self.declare_local(name.clone(), None, Some(init), true);
+                self.declare_local(name.clone(), None, init, true);
             }
             Stmt::Print { value } => {
                 self.append_expr(value);
