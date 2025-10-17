@@ -118,6 +118,9 @@ pub enum Token {
     Int(i32),
     #[regex(r"[0-9]+\.[0-9]*([eE][+-]?[0-9]+)?", |lex| lex.slice().parse())]
     Double(f64),
+    #[regex(r#""([^"\\]|\\.)*""#, |lex| lex.slice()[1..lex.slice().len() - 1].to_string())]
+    #[regex(r#"'([^'\\]|\\.)*'"#, |lex| lex.slice()[1..lex.slice().len() - 1].to_string())]
+    String(String),
 }
 
 impl fmt::Display for Token {

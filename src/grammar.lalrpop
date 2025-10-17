@@ -11,9 +11,7 @@ pub Script: Vec<ast::Stmt> = {
 pub Stmt: ast::Stmt = {
   StmtVarDef,
   StmtVarAssign,
-  "println" <value:Expr>  => {
-    ast::Stmt::Print { value }
-  },
+  StmtPrint,
 }
 
 pub StmtVarDef: ast::Stmt = {
@@ -41,6 +39,15 @@ pub Type: Type = {
   "Int" => Type::Int,
   "Double" => Type::Double,
   "Unit" => Type::Unit,
+}
+
+pub StmtPrint: ast::Stmt = {
+  "println" "(" <value:Expr> ")"  => {
+    ast::Stmt::PrintExpr { value }
+  },
+  "println" "(" <value:"string"> ")"  => {
+    ast::Stmt::PrintString { value }
+  },
 }
 
 pub Expr: Box<ast::Expr> = {
@@ -81,11 +88,11 @@ pub Expr: Box<ast::Expr> = {
 }
 
 pub Term: Box<ast::Expr> = {
-  <val:"int"> => {
-    Box::new(ast::Expr::Int(val))
+  <value:"int"> => {
+    Box::new(ast::Expr::Int(value))
   },
-  <val:"double"> => {
-    Box::new(ast::Expr::Double(val))
+  <value:"double"> => {
+    Box::new(ast::Expr::Double(value))
   },
   <name:"id"> => {
     Box::new(ast::Expr::Var(name))
@@ -102,6 +109,7 @@ extern {
         "id" => Token::Id(<String>),
         "int" => Token::Int(<i32>),
         "double" => Token::Double(<f64>),
+        "string" => Token::String(<String>),
         "fn" => Token::Fn,
         "return" => Token::Return,
         "println" => Token::Println,

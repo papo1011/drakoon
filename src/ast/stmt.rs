@@ -13,7 +13,10 @@ pub enum Stmt {
         name: String,
         value: Box<Expr>,
     },
-    Print {
+    PrintExpr {
         value: Box<Expr>,
+    },
+    PrintString {
+        value: String,
     },
 }
