@@ -2,7 +2,7 @@ use crate::{
     ast::{Expr, Op, Stmt},
     types::{Type, Value, ValueObj, types_compatible},
 };
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 #[derive(Default)]
 pub struct Scope {
@@ -13,9 +13,9 @@ pub struct CodeGen {
     pub output: String,
     pub errors: String,
     pub sem_errors: u32,
+    pub functions: HashSet<String>,
     scopes: Vec<Scope>,
     tmp_count: u32,
-    started_main: bool,
     printf_declared: bool,
     string_literals: HashMap<String, (String, usize)>,
 }
@@ -26,9 +26,9 @@ impl CodeGen {
             output: String::new(),
             errors: String::new(),
             sem_errors: 0,
+            functions: HashSet::new(),
             scopes: vec![Scope::default()],
             tmp_count: 0,
-            started_main: false,
             printf_declared: false,
             string_literals: HashMap::new(),
         }
@@ -273,16 +273,16 @@ impl CodeGen {
     /* -------------------------------------------------------------------------- */
 
     pub fn start_main(&mut self) {
-        if self.started_main {
+        if self.functions.contains("main") {
             self.error("Multiple 'main' function definitions.");
             return;
         }
+        self.functions.insert("main".to_string());
         self.append("define i32 @main() {");
-        self.started_main = true;
     }
 
     pub fn end_main(&mut self) {
-        if self.started_main {
+        if self.functions.contains("main") {
             self.append("ret i32 0");
             self.append("}");
         }
@@ -441,6 +441,12 @@ impl CodeGen {
         ret_type: &Type,
         body: &[Stmt],
     ) {
+        if self.functions.contains(name) {
+            self.error(&format!("Function '{}' already defined", name));
+            return;
+        }
+        self.functions.insert(name.to_string());
+
         let params_str = params
             .iter()
             .map(|(n, t)| format!("{} {}", t.llvm(), n))

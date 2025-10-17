@@ -25,6 +25,11 @@ fn main() {
         codegen.append_stmt(stmt);
     }
 
+    if !codegen.functions.contains("main") {
+        eprintln!("Error: 'main' function is not defined.");
+        std::process::exit(1);
+    }
+
     if codegen.sem_errors > 0 {
         eprintln!("{}", codegen.errors);
         std::process::exit(1);
