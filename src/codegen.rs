@@ -271,7 +271,7 @@ impl CodeGen {
     pub fn append_expr(&mut self, expr: &Expr) -> Value {
         match expr {
             Expr::Int(i) => Value::new_val(i.to_string(), Type::Int),
-            Expr::Double(d) => Value::new_val(format!("{}", d), Type::Double),
+            Expr::Double(d) => Value::new_val(format!("{:?}", d), Type::Double),
             Expr::Var(name) => {
                 let addr = self.lookup_lvalue(name);
                 self.rvalue(&addr)
