@@ -57,6 +57,9 @@ pub enum Token {
     #[token("else")]
     Else,
 
+    #[token("main")]
+    Main,
+
     #[token(":")]
     Col,
     #[token(";")]

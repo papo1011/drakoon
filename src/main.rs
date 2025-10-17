@@ -21,11 +21,9 @@ fn main() {
     let ast = parser.parse(lexer).unwrap();
 
     let mut codegen = CodeGen::new();
-    codegen.start_main();
     for stmt in &ast {
         codegen.append_stmt(stmt);
     }
-    codegen.end_main();
 
     if codegen.sem_errors > 0 {
         eprintln!("{}", codegen.errors);

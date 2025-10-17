@@ -40,26 +40,15 @@ impl CodeGen {
         self.output.push('\n');
     }
 
+    pub fn newline(&mut self) {
+        self.output.push('\n');
+    }
+
     pub fn error(&mut self, msg: &str) {
         self.errors.push_str("SEMANTIC ERROR: ");
         self.errors.push_str(msg);
         self.errors.push('\n');
         self.sem_errors += 1;
-    }
-
-    pub fn start_main(&mut self) {
-        if self.started_main {
-            return;
-        }
-        self.append("define i32 @main() {");
-        self.started_main = true;
-    }
-
-    pub fn end_main(&mut self) {
-        if self.started_main {
-            self.append("ret i32 0");
-            self.append("}");
-        }
     }
 
     /// Generate a new temporary register name to guarantee uniqueness
@@ -246,6 +235,9 @@ impl CodeGen {
 
     pub fn append_stmt(&mut self, stmt: &Stmt) {
         match stmt {
+            Stmt::MainDef { body } => {
+                self.append_main(body);
+            }
             Stmt::VarDef {
                 name,
                 annot,
@@ -265,8 +257,48 @@ impl CodeGen {
             Stmt::PrintString { value } => {
                 self.append_print_string(value);
             }
+            Stmt::FnDef {
+                name,
+                params,
+                ret_type,
+                body,
+            } => {
+                self.append_fn_def(name, params, ret_type, body);
+            }
         }
     }
+
+    /* -------------------------------------------------------------------------- */
+    /*                                MAIN                                        */
+    /* -------------------------------------------------------------------------- */
+
+    pub fn start_main(&mut self) {
+        if self.started_main {
+            self.error("Multiple 'main' function definitions.");
+            return;
+        }
+        self.append("define i32 @main() {");
+        self.started_main = true;
+    }
+
+    pub fn end_main(&mut self) {
+        if self.started_main {
+            self.append("ret i32 0");
+            self.append("}");
+        }
+    }
+
+    pub fn append_main(&mut self, body: &[Stmt]) {
+        self.start_main();
+        for stmt in body {
+            self.append_stmt(stmt);
+        }
+        self.end_main();
+    }
+
+    /* -------------------------------------------------------------------------- */
+    /*                                EXPRESSION                                  */
+    /* -------------------------------------------------------------------------- */
 
     pub fn append_expr(&mut self, expr: &Expr) -> Value {
         match expr {
@@ -396,5 +428,69 @@ impl CodeGen {
             "{} = call i32 (i8*, ...) @printf(i8* {}, i8* {})",
             tmp, format_ptr, string_ptr
         ));
+    }
+
+    /* -------------------------------------------------------------------------- */
+    /*                                FUNCTION                                    */
+    /* -------------------------------------------------------------------------- */
+
+    pub fn append_fn_def(
+        &mut self,
+        name: &str,
+        params: &[(String, Type)],
+        ret_type: &Type,
+        body: &[Stmt],
+    ) {
+        let params_str = params
+            .iter()
+            .map(|(n, t)| format!("{} {}", t.llvm(), n))
+            .collect::<Vec<_>>()
+            .join(", ");
+
+        self.append(&format!(
+            "define {} @{}({}) {{",
+            ret_type.llvm(),
+            name,
+            params_str
+        ));
+
+        self.enter_scope();
+
+        // insert parameters into scope as local variables
+        for (n, t) in params {
+            let addr = self.alloca_of_type(n, t);
+            self.append(&format!(
+                "store {} {}, {}* {}",
+                t.llvm(),
+                n,
+                t.llvm(),
+                addr.repr
+            ));
+
+            self.current_scope_mut().vars.insert(
+                n.clone(),
+                ValueObj {
+                    name: n.clone(),
+                    val: addr,
+                    mutable: true,
+                },
+            );
+        }
+
+        for stmt in body {
+            self.append_stmt(stmt);
+        }
+
+        // If the body doesn't have a "ret", add a default ret
+        match ret_type {
+            Type::Int => self.append("ret i32 0"),
+            Type::Double => self.append("ret double 0.0"),
+            Type::Unit => self.append("ret void"),
+            _ => self.append("ret i32 0 ; default return"),
+        }
+
+        self.leave_scope();
+        self.append("}");
+        self.newline();
     }
 }

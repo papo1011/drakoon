@@ -15,7 +15,7 @@ impl Type {
             Type::Unknown => "i8".into(),
             Type::Int => "i32".into(),
             Type::Double => "double".into(),
-            Type::Unit => "i8".into(),
+            Type::Unit => "void".into(),
             Type::Array(elem, n) => format!("[{} x {}]", n, elem.llvm()),
         }
     }
@@ -35,7 +35,7 @@ impl Type {
             Type::Unknown => None,
             Type::Int => Some(4),
             Type::Double => Some(8),
-            Type::Unit => Some(1),
+            Type::Unit => None,
             Type::Array(elem, n) => elem.size_bytes().map(|s| s * *n),
         }
     }

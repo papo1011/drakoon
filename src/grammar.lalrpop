@@ -9,9 +9,42 @@ pub Script: Vec<ast::Stmt> = {
 }
 
 pub Stmt: ast::Stmt = {
+  StmtMainDef,
   StmtVarDef,
   StmtVarAssign,
   StmtPrint,
+  StmtFnDef,
+}
+
+pub StmtMainDef: ast::Stmt = {
+  "fn" "main" "{" <body:Stmt*> "}" => {
+    ast::Stmt::MainDef {
+        body,
+    }
+  },
+}
+
+pub StmtFnDef: ast::Stmt = {
+  "fn" <name:"id"> "(" <params:ParamList?> ")" "->" <ret:Type> "{" <body:Stmt*> "}" => {
+    ast::Stmt::FnDef {
+        name,
+        params: params.unwrap_or_default(),
+        ret_type: ret,
+        body,
+    }
+  },
+}
+
+pub ParamList: Vec<(String, Type)> = {
+  <first:Param> <rest:("," <Param>)*> => {
+    let mut v = vec![first];
+    v.extend(rest.into_iter().map(|(s, t)| (s, t)));
+    v
+  }
+}
+
+pub Param: (String, Type) = {
+  <name:"id"> ":" <ty:Type> => (name, ty)
 }
 
 pub StmtVarDef: ast::Stmt = {
@@ -120,6 +153,7 @@ extern {
         "for" => Token::For,
         "if" => Token::If,
         "else" => Token::Else,
+        "main" => Token::Main,
         "Int" => Token::IntType,
         "Double" => Token::DoubleType,
         "Unit" => Token::UnitType,
