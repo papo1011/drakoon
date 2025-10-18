@@ -9,11 +9,17 @@ pub struct Scope {
     pub vars: HashMap<String, ValueObj>,
 }
 
+#[derive(Default, Clone)]
+pub struct FnInfo {
+    pub params: Vec<(String, Type)>,
+    pub ret_type: Type,
+}
+
 pub struct CodeGen {
     pub output: String,
     pub errors: String,
     pub sem_errors: u32,
-    pub functions: HashMap<String, Vec<(String, Type)>>,
+    pub functions: HashMap<String, FnInfo>,
     scopes: Vec<Scope>,
     tmp_count: u32,
     printf_declared: bool,
@@ -280,7 +286,7 @@ impl CodeGen {
             self.error("Multiple 'main' function definitions.");
             return;
         }
-        self.functions.insert("main".to_string(), Vec::new());
+        self.functions.insert("main".to_string(), FnInfo::default());
         self.append("define i32 @main() {");
     }
 
@@ -449,7 +455,13 @@ impl CodeGen {
             self.error(&format!("Function '{}' already defined", name));
             return;
         }
-        self.functions.insert(name.to_string(), params.to_vec());
+        self.functions.insert(
+            name.to_string(),
+            FnInfo {
+                params: params.to_vec(),
+                ret_type: ret_type.clone(),
+            },
+        );
 
         let params_str = params
             .iter()
@@ -509,7 +521,7 @@ impl CodeGen {
     /* -------------------------------------------------------------------------- */
 
     fn append_fn_call(&mut self, name: &str, args: &[Box<Expr>]) -> Value {
-        let func_params = match self.functions.get(name).cloned() {
+        let fn_info = match self.functions.get(name).cloned() {
             Some(params) => params,
             None => {
                 self.error(&format!("Call to undefined function '{}'", name));
@@ -517,18 +529,18 @@ impl CodeGen {
             }
         };
 
-        if args.len() != func_params.len() {
+        if args.len() != fn_info.params.len() {
             self.error(&format!(
                 "Argument count mismatch in call to '{}': expected {}, got {}",
                 name,
-                func_params.len(),
+                fn_info.params.len(),
                 args.len()
             ));
             return Value::new_val("%undef", Type::Unknown);
         }
 
         let mut arg_vals = Vec::new();
-        for (arg_expr, (param_name, param_type)) in args.iter().zip(func_params.iter()) {
+        for (arg_expr, (param_name, param_type)) in args.iter().zip(fn_info.params.iter()) {
             let arg_val = self.append_expr(arg_expr);
             if !types_compatible(&arg_val.ty, param_type) {
                 self.error(&format!(
@@ -547,8 +559,13 @@ impl CodeGen {
             .collect::<Vec<_>>()
             .join(", ");
 
-        // TODO: Handle different return types
-        self.append(&format!("{} = call i8 @{}({})", tmp, name, args_str));
-        Value::new_val(tmp, Type::Unit)
+        self.append(&format!(
+            "{} = call {} @{}({})",
+            tmp,
+            fn_info.ret_type.llvm(),
+            name,
+            args_str
+        ));
+        Value::new_val(tmp, fn_info.ret_type)
     }
 }

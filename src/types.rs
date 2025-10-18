@@ -53,6 +53,12 @@ impl fmt::Display for Type {
     }
 }
 
+impl Default for Type {
+    fn default() -> Self {
+        Type::Unknown
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct Value {
     pub repr: String, // LLVM textual operand: "%t3", "1", "%a", etc.
