@@ -495,7 +495,7 @@ impl CodeGen {
         match ret_type {
             Type::Int => self.append("ret i32 0"),
             Type::Double => self.append("ret double 0.0"),
-            Type::Unit => self.append("ret void"),
+            Type::Unit => self.append("ret i8 0"),
             _ => self.append("ret i32 0 ; default return"),
         }
 
@@ -548,7 +548,7 @@ impl CodeGen {
             .join(", ");
 
         // TODO: Handle different return types
-        self.append(&format!("call void @{}({})", name, args_str));
+        self.append(&format!("{} = call i8 @{}({})", tmp, name, args_str));
         Value::new_val(tmp, Type::Unit)
     }
 }
