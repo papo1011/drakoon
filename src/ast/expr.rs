@@ -10,7 +10,7 @@ pub enum Expr {
     },
     Call {
         name: String,
-        args: Vec<Expr>,
+        args: Vec<Box<Expr>>,
     },
 }
 

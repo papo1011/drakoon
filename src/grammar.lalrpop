@@ -14,6 +14,7 @@ pub Stmt: ast::Stmt = {
   StmtVarAssign,
   StmtPrint,
   StmtFnDef,
+  StmtFnCall
 }
 
 pub StmtMainDef: ast::Stmt = {
@@ -35,10 +36,27 @@ pub StmtFnDef: ast::Stmt = {
   },
 }
 
+pub StmtFnCall: ast::Stmt = {
+  <name:"id"> "(" <args:ExprList?> ")" => {
+    ast::Stmt::FnCall {
+        name,
+        args: args.unwrap_or_default(),
+    }
+  },
+}
+
+pub ExprList: Vec<Box<ast::Expr>> = {
+  <first:Expr> <rest:("," <Expr>)*> => {
+    let mut v = vec![first];
+    v.extend(rest.into_iter());
+    v
+  }
+}
+
 pub ParamList: Vec<(String, Type)> = {
   <first:Param> <rest:("," <Param>)*> => {
     let mut v = vec![first];
-    v.extend(rest.into_iter().map(|(s, t)| (s, t)));
+    v.extend(rest.into_iter());
     v
   }
 }
@@ -126,6 +144,11 @@ pub Term: Box<ast::Expr> = {
   },
   <value:"double"> => {
     Box::new(ast::Expr::Double(value))
+  },
+  <name:"id"> "(" <args:ExprList?> ")" => {
+    let args: Vec<Box<ast::Expr>> = args
+      .unwrap_or_default();
+    Box::new(ast::Expr::Call { name, args })
   },
   <name:"id"> => {
     Box::new(ast::Expr::Var(name))

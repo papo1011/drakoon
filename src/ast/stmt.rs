@@ -28,4 +28,8 @@ pub enum Stmt {
         ret_type: Type,
         body: Vec<Stmt>,
     },
+    FnCall {
+        name: String,
+        args: Vec<Box<Expr>>,
+    },
 }
