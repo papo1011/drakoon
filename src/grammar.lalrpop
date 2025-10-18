@@ -48,7 +48,7 @@ pub StmtFnCall: ast::Stmt = {
 pub ExprList: Vec<Box<ast::Expr>> = {
   <first:Expr> <rest:("," <Expr>)*> => {
     let mut v = vec![first];
-    v.extend(rest.into_iter());
+    v.extend(rest);
     v
   }
 }
@@ -56,7 +56,7 @@ pub ExprList: Vec<Box<ast::Expr>> = {
 pub ParamList: Vec<(String, Type)> = {
   <first:Param> <rest:("," <Param>)*> => {
     let mut v = vec![first];
-    v.extend(rest.into_iter());
+    v.extend(rest);
     v
   }
 }
