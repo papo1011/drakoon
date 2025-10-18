@@ -14,7 +14,8 @@ pub Stmt: ast::Stmt = {
   StmtVarAssign,
   StmtPrint,
   StmtFnDef,
-  StmtFnCall
+  StmtFnCall,
+  StmtReturn,
 }
 
 pub StmtMainDef: ast::Stmt = {
@@ -23,6 +24,10 @@ pub StmtMainDef: ast::Stmt = {
         body,
     }
   },
+}
+
+pub StmtReturn: ast::Stmt = {
+  "return" <value:Expr> => ast::Stmt::Return { value: Some(value) }
 }
 
 pub StmtFnDef: ast::Stmt = {

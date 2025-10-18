@@ -32,4 +32,7 @@ pub enum Stmt {
         name: String,
         args: Vec<Box<Expr>>,
     },
+    Return {
+        value: Option<Box<Expr>>,
+    },
 }

@@ -24,6 +24,7 @@ pub struct CodeGen {
     tmp_count: u32,
     printf_declared: bool,
     string_literals: HashMap<String, (String, usize)>,
+    ret_type: Option<Type>,
 }
 
 impl CodeGen {
@@ -37,6 +38,7 @@ impl CodeGen {
             tmp_count: 0,
             printf_declared: false,
             string_literals: HashMap::new(),
+            ret_type: None,
         }
     }
 
@@ -274,6 +276,9 @@ impl CodeGen {
             Stmt::FnCall { name, args } => {
                 self.append_fn_call(name, args);
             }
+            Stmt::Return { value } => {
+                self.append_return(value.as_deref());
+            }
         }
     }
 
@@ -476,6 +481,7 @@ impl CodeGen {
             params_str
         ));
 
+        self.ret_type = None;
         self.enter_scope();
         for (n, t) in params {
             self.current_scope_mut().vars.insert(
@@ -492,17 +498,39 @@ impl CodeGen {
             self.append_stmt(stmt);
         }
 
-        // TODO: add return statement support
-        match ret_type {
-            Type::Int => self.append("ret i32 0"),
-            Type::Double => self.append("ret double 0.0"),
-            Type::Unit => self.append("ret i8 0"),
-            _ => self.append("ret i32 0 ; default return"),
+        match self.ret_type {
+            Some(ref rt) if rt != ret_type => {
+                self.error(&format!(
+                    "Function '{}' declared return type {} but has return type {}",
+                    name, ret_type, rt
+                ));
+            }
+            None if *ret_type != Type::Unit => {
+                self.error(&format!(
+                    "Function '{}' declared return type {} but has return type Unit",
+                    name, ret_type
+                ));
+            }
+            None if *ret_type == Type::Unit => {
+                self.append("ret i8 0"); // Implicit return of Unit
+            }
+            _ => {}
         }
 
         self.leave_scope();
         self.append("}");
         self.newline();
+    }
+
+    fn append_return(&mut self, value: Option<&Expr>) {
+        if let Some(expr) = value {
+            let ret_val = self.append_expr(expr);
+            self.ret_type = Some(ret_val.ty.clone());
+            self.append(&format!("ret {} {}", ret_val.ty.llvm(), ret_val.repr));
+        } else {
+            self.ret_type = Some(Type::Unit);
+            self.append("ret i8 0"); // return Unit
+        }
     }
 
     /* -------------------------------------------------------------------------- */
