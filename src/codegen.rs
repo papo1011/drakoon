@@ -465,7 +465,7 @@ impl CodeGen {
 
         let params_str = params
             .iter()
-            .map(|(n, t)| format!("{} {}", t.llvm(), n))
+            .map(|(n, t)| format!("{} %{}", t.llvm(), n))
             .collect::<Vec<_>>()
             .join(", ");
 
@@ -477,24 +477,13 @@ impl CodeGen {
         ));
 
         self.enter_scope();
-
-        // insert parameters into scope as local variables
         for (n, t) in params {
-            let addr = self.alloca_of_type(n, t);
-            self.append(&format!(
-                "store {} {}, {}* {}",
-                t.llvm(),
-                n,
-                t.llvm(),
-                addr.repr
-            ));
-
             self.current_scope_mut().vars.insert(
                 n.clone(),
                 ValueObj {
                     name: n.clone(),
-                    val: addr,
-                    mutable: true,
+                    val: Value::new_val(format!("%{}", n), t.clone()),
+                    mutable: false,
                 },
             );
         }
@@ -503,7 +492,7 @@ impl CodeGen {
             self.append_stmt(stmt);
         }
 
-        // If the body doesn't have a "ret", add a default ret
+        // TODO: add return statement support
         match ret_type {
             Type::Int => self.append("ret i32 0"),
             Type::Double => self.append("ret double 0.0"),
