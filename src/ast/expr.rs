@@ -8,6 +8,10 @@ pub enum Expr {
         operator: Op,
         rhs: Box<Expr>,
     },
+    Call {
+        name: String,
+        args: Vec<Expr>,
+    },
 }
 
 #[derive(Clone, Debug, PartialEq)]

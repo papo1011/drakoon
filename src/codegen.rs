@@ -2,7 +2,7 @@ use crate::{
     ast::{Expr, Op, Stmt},
     types::{Type, Value, ValueObj, types_compatible},
 };
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 
 #[derive(Default)]
 pub struct Scope {
@@ -13,7 +13,7 @@ pub struct CodeGen {
     pub output: String,
     pub errors: String,
     pub sem_errors: u32,
-    pub functions: HashSet<String>,
+    pub functions: HashMap<String, Vec<(String, Type)>>,
     scopes: Vec<Scope>,
     tmp_count: u32,
     printf_declared: bool,
@@ -26,7 +26,7 @@ impl CodeGen {
             output: String::new(),
             errors: String::new(),
             sem_errors: 0,
-            functions: HashSet::new(),
+            functions: HashMap::new(),
             scopes: vec![Scope::default()],
             tmp_count: 0,
             printf_declared: false,
@@ -273,16 +273,16 @@ impl CodeGen {
     /* -------------------------------------------------------------------------- */
 
     pub fn start_main(&mut self) {
-        if self.functions.contains("main") {
+        if self.functions.contains_key("main") {
             self.error("Multiple 'main' function definitions.");
             return;
         }
-        self.functions.insert("main".to_string());
+        self.functions.insert("main".to_string(), Vec::new());
         self.append("define i32 @main() {");
     }
 
     pub fn end_main(&mut self) {
-        if self.functions.contains("main") {
+        if self.functions.contains_key("main") {
             self.append("ret i32 0");
             self.append("}");
         }
@@ -312,6 +312,49 @@ impl CodeGen {
                 let lhs_val = self.append_expr(lhs);
                 let rhs_val = self.append_expr(rhs);
                 self.binop(operator.clone(), &lhs_val, &rhs_val)
+            }
+            Expr::Call { name, args } => {
+                let func_params = match self.functions.get(name).cloned() {
+                    Some(params) => params,
+                    None => {
+                        self.error(&format!("Call to undefined function '{}'", name));
+                        return Value::new_val("%undef", Type::Unknown);
+                    }
+                };
+
+                if args.len() != func_params.len() {
+                    self.error(&format!(
+                        "Argument count mismatch in call to '{}': expected {}, got {}",
+                        name,
+                        func_params.len(),
+                        args.len()
+                    ));
+                    return Value::new_val("%undef", Type::Unknown);
+                }
+
+                let mut arg_vals = Vec::new();
+                for (arg_expr, (param_name, param_type)) in args.iter().zip(func_params.iter()) {
+                    let arg_val = self.append_expr(arg_expr);
+                    if !types_compatible(&arg_val.ty, param_type) {
+                        self.error(&format!(
+                            "Type mismatch in argument '{}' of call to '{}': expected {}, got {}",
+                            param_name, name, param_type, arg_val.ty
+                        ));
+                        return Value::new_val("%undef", Type::Unknown);
+                    }
+                    arg_vals.push(arg_val);
+                }
+
+                let tmp = self.new_tmp();
+                let args_str = arg_vals
+                    .iter()
+                    .map(|v| format!("{} {}", v.ty.llvm(), v.repr))
+                    .collect::<Vec<_>>()
+                    .join(", ");
+
+                // TODO: Handle different return types
+                self.append(&format!("{} = call i32 @{}({})", tmp, name, args_str));
+                Value::new_val(tmp, Type::Int)
             }
         }
     }
@@ -431,7 +474,7 @@ impl CodeGen {
     }
 
     /* -------------------------------------------------------------------------- */
-    /*                                FUNCTION                                    */
+    /*                             FUNCTION DEFINITION                            */
     /* -------------------------------------------------------------------------- */
 
     pub fn append_fn_def(
@@ -441,11 +484,11 @@ impl CodeGen {
         ret_type: &Type,
         body: &[Stmt],
     ) {
-        if self.functions.contains(name) {
+        if self.functions.contains_key(name) {
             self.error(&format!("Function '{}' already defined", name));
             return;
         }
-        self.functions.insert(name.to_string());
+        self.functions.insert(name.to_string(), params.to_vec());
 
         let params_str = params
             .iter()
