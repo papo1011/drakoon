@@ -25,6 +25,7 @@ pub struct CodeGen {
     printf_declared: bool,
     string_literals: HashMap<String, (String, usize)>,
     ret_type: Option<Type>,
+    label_count: u32,
 }
 
 impl CodeGen {
@@ -39,6 +40,7 @@ impl CodeGen {
             printf_declared: false,
             string_literals: HashMap::new(),
             ret_type: None,
+            label_count: 0,
         }
     }
 
@@ -52,6 +54,16 @@ impl CodeGen {
         self.output.push('\n');
     }
 
+    fn append_label(&mut self, label: &str) {
+        self.output.push_str(label);
+        self.output.push_str(":\n");
+    }
+
+    fn next_label_id(&mut self) -> u32 {
+        let id = self.label_count;
+        self.label_count += 1;
+        id
+    }
     pub fn error(&mut self, msg: &str) {
         self.errors.push_str("SEMANTIC ERROR: ");
         self.errors.push_str(msg);
@@ -465,21 +477,32 @@ impl CodeGen {
             self.append_stmt(stmt);
         }
 
-        match self.ret_type {
-            Some(ref rt) if rt != ret_type => {
+        if let Some(rt) = &self.ret_type {
+            if !types_compatible(ret_type, rt) {
                 self.error(&format!(
-                    "Function '{}' declared return type {} but has return type {}",
+                    "Function '{}' declared return type {} but returns {}",
                     name, ret_type, rt
                 ));
             }
-            None if *ret_type != Type::Unit => {
-                self.error(&format!(
-                    "Function '{}' declared return type {} but has return type Unit",
-                    name, ret_type
-                ));
+        } else if !types_compatible(ret_type, &Type::Unit) {
+            self.error(&format!(
+                "Function '{}' declared return type {} but has no return statement",
+                name, ret_type
+            ));
+        }
+
+        match ret_type {
+            Type::Unit => {
+                self.append("ret i8 0");
             }
-            None if *ret_type == Type::Unit => {
-                self.append("ret i8 0"); // Implicit return of Unit
+            Type::Int => {
+                self.append("ret i32 0");
+            }
+            Type::Double => {
+                self.append("ret double 0.0");
+            }
+            Type::Bool => {
+                self.append("ret i1 0");
             }
             _ => {}
         }
@@ -558,7 +581,47 @@ impl CodeGen {
     /* -------------------------------------------------------------------------- */
 
     fn append_if_else(&mut self, cond: &Expr, then_branch: &Stmt, else_branch: Option<&Stmt>) {
-        unimplemented!()
+        let c = self.append_expr(cond);
+        let cond_repr = if c.ty == Type::Bool {
+            c.repr
+        } else {
+            self.error("If condition must be a boolean expression");
+            "false".to_string()
+        };
+
+        let id = self.next_label_id();
+        let then_lbl = format!("if.then.{}", id);
+        let end_lbl = format!("if.end.{}", id);
+
+        match else_branch {
+            Some(eb) => {
+                let else_lbl = format!("if.else.{}", id);
+                self.append(&format!(
+                    "br i1 {}, label %{}, label %{}",
+                    cond_repr, then_lbl, else_lbl
+                ));
+
+                self.append_label(&then_lbl);
+                self.append_stmt(then_branch);
+                self.append(&format!("br label %{}", end_lbl));
+
+                self.append_label(&else_lbl);
+                self.append_stmt(eb);
+                self.append(&format!("br label %{}", end_lbl));
+            }
+            None => {
+                self.append(&format!(
+                    "br i1 {}, label %{}, label %{}",
+                    cond_repr, then_lbl, end_lbl
+                ));
+
+                self.append_label(&then_lbl);
+                self.append_stmt(then_branch);
+                self.append(&format!("br label %{}", end_lbl));
+            }
+        }
+
+        self.append_label(&end_lbl);
     }
 
     /* -------------------------------------------------------------------------- */
