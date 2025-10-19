@@ -105,10 +105,16 @@ pub StmtVarDef: ast::Stmt = {
 
 pub StmtGlobalVarDef: ast::Stmt = {
   "let" <name:"id"> "=" <value:BasicTerm>  => {
-    ast::Stmt::GlobalVarDef { name, annot: None, value }
+    ast::Stmt::GlobalVarDef { name, annot: None, value, is_const: false }
   },
   "let" <name:"id"> ":" <annot:Type> "=" <value:BasicTerm>  => {
-    ast::Stmt::GlobalVarDef { name, annot: Some(annot), value }
+    ast::Stmt::GlobalVarDef { name, annot: Some(annot), value, is_const: false }
+  },
+  "const" <name:"id"> "=" <value:BasicTerm>  => {
+    ast::Stmt::GlobalVarDef { name, annot: None, value, is_const: true }
+  },
+  "const" <name:"id"> ":" <annot:Type> "=" <value:BasicTerm>  => {
+    ast::Stmt::GlobalVarDef { name, annot: Some(annot), value, is_const: true }
   },
 }
 

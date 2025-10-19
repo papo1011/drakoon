@@ -199,9 +199,14 @@ impl CodeGen {
             Stmt::MainDef { body } => {
                 self.append_main(body);
             }
-            Stmt::GlobalVarDef { name, annot, value } => {
+            Stmt::GlobalVarDef {
+                name,
+                annot,
+                value,
+                is_const,
+            } => {
                 let init = self.append_expr(value);
-                self.append_global_var_def(name, annot, init);
+                self.append_global_var_def(name, annot, init, *is_const);
             }
             Stmt::VarDef {
                 name,
@@ -250,7 +255,13 @@ impl CodeGen {
     /*                                VARIABLE                                    */
     /* -------------------------------------------------------------------------- */
 
-    fn append_global_var_def(&mut self, name: &str, annot: &Option<Type>, init: Value) {
+    fn append_global_var_def(
+        &mut self,
+        name: &str,
+        annot: &Option<Type>,
+        init: Value,
+        is_const: bool,
+    ) {
         if self.functions.contains_key(name) {
             self.error(&format!(
                 "Global '{}' conflicts with an existing function name",
@@ -262,6 +273,13 @@ impl CodeGen {
         if !self.is_name_available(name) {
             self.error(&format!("Global variable '{}' already declared", name));
             return;
+        }
+
+        if is_const && name.chars().any(|c| c.is_lowercase()) {
+            self.error(&format!(
+                "Constant global variable '{}' must be all uppercase",
+                name
+            ));
         }
 
         let ty = if let Some(t) = annot {

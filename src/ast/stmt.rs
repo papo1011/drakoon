@@ -10,6 +10,7 @@ pub enum Stmt {
         name: String,
         annot: Option<Type>,
         value: Box<Expr>,
+        is_const: bool,
     },
     VarDef {
         name: String,
