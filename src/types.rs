@@ -101,6 +101,7 @@ pub fn types_compatible(target: &Type, source: &Type) -> bool {
         (Type::Int, Type::Int) => true,
         (Type::Double, Type::Double) => true,
         (Type::Unit, Type::Unit) => true,
+        (Type::Bool, Type::Bool) => true,
         (Type::Array(t1, n1), Type::Array(t2, n2)) => n1 == n2 && types_compatible(t1, t2),
         _ => false,
     }

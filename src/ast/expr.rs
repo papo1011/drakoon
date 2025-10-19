@@ -2,6 +2,7 @@
 pub enum Expr {
     Int(i32),
     Double(f64),
+    Bool(bool),
     Var(String),
     BinaryOp {
         lhs: Box<Expr>,

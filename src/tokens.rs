@@ -39,6 +39,13 @@ pub enum Token {
     DoubleType,
     #[token("Unit")]
     UnitType,
+    #[token("Bool")]
+    BoolType,
+
+    #[token("true")]
+    True,
+    #[token("false")]
+    False,
 
     #[token("let")]
     Let,

@@ -363,14 +363,27 @@ impl CodeGen {
     pub fn append_print_expr(&mut self, expr: &Expr) {
         self.declare_printf_once();
         let val = self.append_expr(expr);
+
         let format_ptr = match val.ty {
             Type::Int => self.global_str("%d\n"),
             Type::Double => self.global_str("%f\n"),
+            Type::Bool => {
+                let true_ptr = self.global_str("true\n");
+                let false_ptr = self.global_str("false\n");
+                let tmp_bool = self.new_tmp();
+
+                self.append(&format!(
+                    "{} = select i1 {}, i8* {}, i8* {}",
+                    tmp_bool, val.repr, true_ptr, false_ptr
+                ));
+                tmp_bool
+            }
             _ => {
                 self.error("Unsupported type in println expression");
                 return;
             }
         };
+
         let tmp = self.new_tmp();
         self.append(&format!(
             "{} = call i32 (i8*, ...) @printf(i8* {}, {} {})",
@@ -541,6 +554,7 @@ impl CodeGen {
         match expr {
             Expr::Int(i) => Value::new_val(i.to_string(), Type::Int),
             Expr::Double(d) => Value::new_val(format!("{:?}", d), Type::Double),
+            Expr::Bool(b) => Value::new_val(b.to_string(), Type::Bool),
             Expr::Var(name) => {
                 let addr = self.lookup_lvalue(name);
                 self.rvalue(&addr)

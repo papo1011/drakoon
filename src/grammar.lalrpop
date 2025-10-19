@@ -95,6 +95,7 @@ pub Type: Type = {
   "Int" => Type::Int,
   "Double" => Type::Double,
   "Unit" => Type::Unit,
+  "Bool" => Type::Bool,
 }
 
 pub StmtPrint: ast::Stmt = {
@@ -106,43 +107,6 @@ pub StmtPrint: ast::Stmt = {
   },
 }
 
-pub Expr: Box<ast::Expr> = {
-  #[precedence(level="1")]
-  Term,
-
-  #[precedence(level="2")] #[assoc(side="left")]
-  <lhs:Expr> "*" <rhs:Expr> => {
-    Box::new(ast::Expr::BinaryOp {
-      lhs,
-      operator: ast::Op::Mul,
-      rhs
-    })
-  },
-  <lhs:Expr> "/" <rhs:Expr> => {
-    Box::new(ast::Expr::BinaryOp {
-      lhs,
-      operator: ast::Op ::Div,
-      rhs
-    })
-  },
-
-  #[precedence(level="3")] #[assoc(side="left")]
-  <lhs:Expr> "+" <rhs:Expr> => {
-    Box::new(ast::Expr::BinaryOp {
-      lhs,
-      operator: ast::Op::Add,
-      rhs
-    })
-  },
-  <lhs:Expr> "-" <rhs:Expr> => {
-    Box::new(ast::Expr::BinaryOp {
-      lhs,
-      operator: ast::Op::Sub,
-      rhs
-    })
-  },
-}
-
 pub Term: Box<ast::Expr> = {
   <value:"int"> => {
     Box::new(ast::Expr::Int(value))
@@ -150,6 +114,8 @@ pub Term: Box<ast::Expr> = {
   <value:"double"> => {
     Box::new(ast::Expr::Double(value))
   },
+  "true" => Box::new(ast::Expr::Bool(true)),
+  "false" => Box::new(ast::Expr::Bool(false)),
   <name:"id"> "(" <args:ExprList?> ")" => {
     let args: Vec<Box<ast::Expr>> = args
       .unwrap_or_default();
@@ -159,6 +125,33 @@ pub Term: Box<ast::Expr> = {
     Box::new(ast::Expr::Var(name))
   },
   "(" <Expr> ")",
+}
+
+pub Expr: Box<ast::Expr> = {
+  #[precedence(level="1")]
+  Term,
+
+  #[precedence(level="2")] #[assoc(side="left")]
+  <lhs:Expr> "*" <rhs:Expr> => Box::new(ast::Expr::BinaryOp { lhs, operator: ast::Op::Mul, rhs }),
+  <lhs:Expr> "/" <rhs:Expr> => Box::new(ast::Expr::BinaryOp { lhs, operator: ast::Op::Div, rhs }),
+
+  #[precedence(level="3")] #[assoc(side="left")]
+  <lhs:Expr> "+" <rhs:Expr> => Box::new(ast::Expr::BinaryOp { lhs, operator: ast::Op::Add, rhs }),
+  <lhs:Expr> "-" <rhs:Expr> => Box::new(ast::Expr::BinaryOp { lhs, operator: ast::Op::Sub, rhs }),
+
+  #[precedence(level="4")] #[assoc(side="left")]
+  <lhs:Expr> "<" <rhs:Expr>  => Box::new(ast::Expr::BinaryOp { lhs, operator: ast::Op::Lt, rhs }),
+  <lhs:Expr> ">" <rhs:Expr>  => Box::new(ast::Expr::BinaryOp { lhs, operator: ast::Op::Gt, rhs }),
+  <lhs:Expr> "<=" <rhs:Expr> => Box::new(ast::Expr::BinaryOp { lhs, operator: ast::Op::Le, rhs }),
+  <lhs:Expr> ">=" <rhs:Expr> => Box::new(ast::Expr::BinaryOp { lhs, operator: ast::Op::Ge, rhs }),
+
+  #[precedence(level="5")] #[assoc(side="left")]
+  <lhs:Expr> "==" <rhs:Expr> => Box::new(ast::Expr::BinaryOp { lhs, operator: ast::Op::Eq, rhs }),
+  <lhs:Expr> "!=" <rhs:Expr> => Box::new(ast::Expr::BinaryOp { lhs, operator: ast::Op::Ne, rhs }),
+
+  #[precedence(level="6")] #[assoc(side="left")]
+  <lhs:Expr> "&&" <rhs:Expr> => Box::new(ast::Expr::BinaryOp { lhs, operator: ast::Op::And, rhs }),
+  <lhs:Expr> "||" <rhs:Expr> => Box::new(ast::Expr::BinaryOp { lhs, operator: ast::Op::Or, rhs }),
 }
 
 
@@ -185,6 +178,9 @@ extern {
         "Int" => Token::IntType,
         "Double" => Token::DoubleType,
         "Unit" => Token::UnitType,
+        "Bool" => Token::BoolType,
+        "true" => Token::True,
+        "false" => Token::False,
         "==" => Token::Eq,
         "!=" => Token::Neq,
         "<=" => Token::Le,
