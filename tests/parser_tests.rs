@@ -5,16 +5,16 @@ fn expr_int() {
     let mbt = r#"
         let a = 42
         let b = 23
-        println(a + b)
+        fn main {
+            println(a + b)
+        }
     "#;
 
     let lexer = Lexer::new(mbt);
     let expr = ScriptParser::new().parse(lexer).unwrap();
     assert_eq!(
         &format!("{:?}", expr),
-        "[VarDef { name: \"a\", annot: None, value: Int(42), mutable: false }, \
-          VarDef { name: \"b\", annot: None, value: Int(23), mutable: false }, \
-          PrintExpr { value: BinaryOp { lhs: Var(\"a\"), operator: Add, rhs: Var(\"b\") } }]"
+        "[GlobalVarDef { name: \"a\", annot: None, value: Int(42), is_const: false }, GlobalVarDef { name: \"b\", annot: None, value: Int(23), is_const: false }, MainDef { body: [PrintExpr { value: BinaryOp { lhs: Var(\"a\"), operator: Add, rhs: Var(\"b\") } }] }]"
     );
 }
 
@@ -23,16 +23,16 @@ fn expr_double() {
     let mbt = r#"
         let a = 42.3
         let b = 23.7
-        println(a + b)
+        fn main {
+            println(a + b)
+        }
     "#;
 
     let lexer = Lexer::new(mbt);
     let expr = ScriptParser::new().parse(lexer).unwrap();
     assert_eq!(
         &format!("{:?}", expr),
-        "[VarDef { name: \"a\", annot: None, value: Double(42.3), mutable: false }, \
-          VarDef { name: \"b\", annot: None, value: Double(23.7), mutable: false }, \
-          PrintExpr { value: BinaryOp { lhs: Var(\"a\"), operator: Add, rhs: Var(\"b\") } }]"
+        "[GlobalVarDef { name: \"a\", annot: None, value: Double(42.3), is_const: false }, GlobalVarDef { name: \"b\", annot: None, value: Double(23.7), is_const: false }, MainDef { body: [PrintExpr { value: BinaryOp { lhs: Var(\"a\"), operator: Add, rhs: Var(\"b\") } }] }]"
     );
 }
 
