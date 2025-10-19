@@ -36,7 +36,7 @@ pub enum Stmt {
     },
     FnCall {
         name: String,
-        args: Vec<Box<Expr>>,
+        args: Vec<Expr>,
     },
     Return {
         value: Option<Box<Expr>>,

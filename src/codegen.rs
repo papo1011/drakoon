@@ -607,7 +607,7 @@ impl CodeGen {
     /*                               FUNCTION CALL                                */
     /* -------------------------------------------------------------------------- */
 
-    fn append_fn_call(&mut self, name: &str, args: &[Box<Expr>]) -> Value {
+    fn append_fn_call(&mut self, name: &str, args: &[Expr]) -> Value {
         let fn_info = match self.functions.get(name).cloned() {
             Some(params) => params,
             None => {

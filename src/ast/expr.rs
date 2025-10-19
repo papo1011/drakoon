@@ -11,7 +11,7 @@ pub enum Expr {
     },
     Call {
         name: String,
-        args: Vec<Box<Expr>>,
+        args: Vec<Expr>,
     },
 }
 
