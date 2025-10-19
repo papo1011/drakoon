@@ -1,8 +1,12 @@
 ///|
+let c : Int = 8
+
+///|
 /// Add is a function that takes two arguments and returns a Int value.
 fn add(a : Int, b : Int) -> Int {
-  // return the sum of a and b
-  return a + b
+  // return the sum of a, b and c
+  println(c)
+  return a + b + c
 }
 
 ///|

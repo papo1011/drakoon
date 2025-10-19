@@ -6,6 +6,11 @@ pub enum Stmt {
     MainDef {
         body: Vec<Stmt>,
     },
+    GlobalVarDef {
+        name: String,
+        annot: Option<Type>,
+        value: Box<Expr>,
+    },
     VarDef {
         name: String,
         annot: Option<Type>,

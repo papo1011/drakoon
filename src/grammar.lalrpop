@@ -5,15 +5,19 @@ use crate::types::Type;
 grammar;
 
 pub Script: Vec<ast::Stmt> = {
-  <stmts:Stmt*> => stmts
+  <gstmts:GlobalStmt*> => gstmts
+}
+
+pub GlobalStmt: ast::Stmt = {
+  StmtMainDef,
+  StmtGlobalVarDef,
+  StmtFnDef,
 }
 
 pub Stmt: ast::Stmt = {
-  StmtMainDef,
   StmtVarDef,
   StmtVarAssign,
   StmtPrint,
-  StmtFnDef,
   StmtFnCall,
   StmtReturn,
   StmtIf,
@@ -99,6 +103,15 @@ pub StmtVarDef: ast::Stmt = {
   },
 }
 
+pub StmtGlobalVarDef: ast::Stmt = {
+  "let" <name:"id"> "=" <value:BasicTerm>  => {
+    ast::Stmt::GlobalVarDef { name, annot: None, value }
+  },
+  "let" <name:"id"> ":" <annot:Type> "=" <value:BasicTerm>  => {
+    ast::Stmt::GlobalVarDef { name, annot: Some(annot), value }
+  },
+}
+
 pub StmtVarAssign: ast::Stmt = {
   <name:"id"> "=" <value:Expr> => {
     ast::Stmt::VarAssign { name, value }
@@ -139,6 +152,17 @@ pub Term: Box<ast::Expr> = {
     Box::new(ast::Expr::Var(name))
   },
   "(" <Expr> ")",
+}
+
+pub BasicTerm: Box<ast::Expr> = {
+  <value:"int"> => {
+    Box::new(ast::Expr::Int(value))
+  },
+  <value:"double"> => {
+    Box::new(ast::Expr::Double(value))
+  },
+  "true" => Box::new(ast::Expr::Bool(true)),
+  "false" => Box::new(ast::Expr::Bool(false)),
 }
 
 pub Expr: Box<ast::Expr> = {

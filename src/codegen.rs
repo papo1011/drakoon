@@ -59,6 +59,11 @@ impl CodeGen {
         self.output.push_str(":\n");
     }
 
+    fn append_global_line(&mut self, s: &str) {
+        self.output.push_str(s);
+        self.output.push('\n');
+    }
+
     fn next_label_id(&mut self) -> u32 {
         let id = self.label_count;
         self.label_count += 1;
@@ -194,6 +199,10 @@ impl CodeGen {
             Stmt::MainDef { body } => {
                 self.append_main(body);
             }
+            Stmt::GlobalVarDef { name, annot, value } => {
+                let init = self.append_expr(value);
+                self.append_global_var_def(name, annot, init);
+            }
             Stmt::VarDef {
                 name,
                 annot,
@@ -240,6 +249,51 @@ impl CodeGen {
     /* -------------------------------------------------------------------------- */
     /*                                VARIABLE                                    */
     /* -------------------------------------------------------------------------- */
+
+    fn append_global_var_def(&mut self, name: &str, annot: &Option<Type>, init: Value) {
+        if self.functions.contains_key(name) {
+            self.error(&format!(
+                "Global '{}' conflicts with an existing function name",
+                name
+            ));
+            return;
+        }
+
+        if !self.is_name_available(name) {
+            self.error(&format!("Global variable '{}' already declared", name));
+            return;
+        }
+
+        let ty = if let Some(t) = annot {
+            if !types_compatible(t, &init.ty) {
+                self.error(&format!(
+                    "Type mismatch in global '{}': {} <- {}",
+                    name, t, init.ty
+                ));
+                return;
+            }
+            t.clone()
+        } else {
+            init.ty.clone()
+        };
+
+        self.append_global_line(&format!(
+            "@{} = global {} {}, align {}",
+            name,
+            ty.llvm(),
+            init.repr,
+            ty.align()
+        ));
+
+        self.current_scope_mut().vars.insert(
+            name.to_string(),
+            ValueObj {
+                name: name.to_string(),
+                val: Value::new_addr(format!("@{}", name), ty.clone()),
+                mutable: false,
+            },
+        );
+    }
 
     pub fn var_definition(
         &mut self,
@@ -446,6 +500,14 @@ impl CodeGen {
                 ret_type: ret_type.clone(),
             },
         );
+
+        if !self.is_name_available(name) {
+            self.error(&format!(
+                "Function '{}' conflicts with an existing variable name",
+                name
+            ));
+            return;
+        }
 
         let params_str = params
             .iter()
