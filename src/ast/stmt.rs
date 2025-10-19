@@ -35,4 +35,9 @@ pub enum Stmt {
     Return {
         value: Option<Box<Expr>>,
     },
+    If {
+        cond: Box<Expr>,
+        then_branch: Box<Stmt>,
+        else_branch: Option<Box<Stmt>>,
+    },
 }

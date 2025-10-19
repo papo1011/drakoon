@@ -215,6 +215,13 @@ impl CodeGen {
             Stmt::Return { value } => {
                 self.append_return(value.as_deref());
             }
+            Stmt::If {
+                cond,
+                then_branch,
+                else_branch,
+            } => {
+                self.append_if_else(cond, then_branch, else_branch.as_deref());
+            }
         }
     }
 
@@ -544,6 +551,14 @@ impl CodeGen {
             args_str
         ));
         Value::new_val(tmp, fn_info.ret_type)
+    }
+
+    /* -------------------------------------------------------------------------- */
+    /*                                 IF ELSE                                    */
+    /* -------------------------------------------------------------------------- */
+
+    fn append_if_else(&mut self, cond: &Expr, then_branch: &Stmt, else_branch: Option<&Stmt>) {
+        unimplemented!()
     }
 
     /* -------------------------------------------------------------------------- */

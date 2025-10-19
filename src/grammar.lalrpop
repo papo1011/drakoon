@@ -16,6 +16,7 @@ pub Stmt: ast::Stmt = {
   StmtFnDef,
   StmtFnCall,
   StmtReturn,
+  StmtIf,
 }
 
 pub StmtMainDef: ast::Stmt = {
@@ -25,6 +26,19 @@ pub StmtMainDef: ast::Stmt = {
     }
   },
 }
+
+StmtIf: ast::Stmt = {
+    "if" <cond:Expr> "{" <then_branch:Stmt> "}" => ast::Stmt::If {
+        cond,
+        then_branch: Box::new(then_branch),
+        else_branch: None,
+    },
+    "if" <cond:Expr> "{" <then_branch:Stmt> "}" "else" "{" <else_branch:Stmt> "}" => ast::Stmt::If {
+        cond,
+        then_branch: Box::new(then_branch),
+        else_branch: Some(Box::new(else_branch)),
+    },
+};
 
 pub StmtReturn: ast::Stmt = {
   "return" <value:Expr> => ast::Stmt::Return { value: Some(value) }
