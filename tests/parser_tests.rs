@@ -108,3 +108,24 @@ fn multiple_statements_and_return() {
         "[FnDef { name: \"compute\", params: [], ret_type: Int, body: [VarDef { name: \"a\", annot: None, value: Int(10), mutable: false }, VarDef { name: \"b\", annot: None, value: Int(20), mutable: false }, PrintString { value: \"value of a:\" }, PrintExpr { value: Var(\"a\") }, Return { value: Some(BinaryOp { lhs: Var(\"a\"), operator: Add, rhs: Var(\"b\") }) }] }]"
     );
 }
+
+#[test]
+fn if_else_statement() {
+    let mbt = r#"
+        fn check(value: Int) -> Int {
+            if value > 0 {
+                return 1
+            } else {
+                return 0
+            }
+        }
+    "#;
+
+    let lexer = Lexer::new(mbt);
+    let expr = ScriptParser::new().parse(lexer).unwrap();
+
+    assert_eq!(
+        &format!("{:?}", expr),
+        "[FnDef { name: \"check\", params: [(\"value\", Int)], ret_type: Int, body: [If { cond: BinaryOp { lhs: Var(\"value\"), operator: Gt, rhs: Int(0) }, then_branch: Return { value: Some(Int(1)) }, else_branch: Some(Return { value: Some(Int(0)) }) }] }]"
+    );
+}
