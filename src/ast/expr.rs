@@ -16,8 +16,21 @@ pub enum Expr {
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum Op {
+    // Arithmetic operators
     Add,
     Sub,
     Mul,
     Div,
+
+    // Comparison operators
+    Eq,
+    Ne,
+    Lt,
+    Gt,
+    Le,
+    Ge,
+
+    // Logical operators
+    And,
+    Or,
 }

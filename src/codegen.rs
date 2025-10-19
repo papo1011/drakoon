@@ -177,6 +177,51 @@ impl CodeGen {
         Value::new_addr(repr, ty.clone())
     }
 
+    pub fn append_stmt(&mut self, stmt: &Stmt) {
+        match stmt {
+            Stmt::MainDef { body } => {
+                self.append_main(body);
+            }
+            Stmt::VarDef {
+                name,
+                annot,
+                value,
+                mutable,
+            } => {
+                let init = self.append_expr(value);
+                self.var_definition(name.clone(), annot.clone(), init, *mutable);
+            }
+            Stmt::VarAssign { name, value } => {
+                let val = self.append_expr(value);
+                self.var_assignment(name, val);
+            }
+            Stmt::PrintExpr { value } => {
+                self.append_print_expr(value);
+            }
+            Stmt::PrintString { value } => {
+                self.append_print_string(value);
+            }
+            Stmt::FnDef {
+                name,
+                params,
+                ret_type,
+                body,
+            } => {
+                self.append_fn_def(name, params, ret_type, body);
+            }
+            Stmt::FnCall { name, args } => {
+                self.append_fn_call(name, args);
+            }
+            Stmt::Return { value } => {
+                self.append_return(value.as_deref());
+            }
+        }
+    }
+
+    /* -------------------------------------------------------------------------- */
+    /*                                VARIABLE                                    */
+    /* -------------------------------------------------------------------------- */
+
     pub fn var_definition(
         &mut self,
         name: String,
@@ -241,47 +286,6 @@ impl CodeGen {
         self.store_scalar(&addr, &rhs);
     }
 
-    pub fn append_stmt(&mut self, stmt: &Stmt) {
-        match stmt {
-            Stmt::MainDef { body } => {
-                self.append_main(body);
-            }
-            Stmt::VarDef {
-                name,
-                annot,
-                value,
-                mutable,
-            } => {
-                let init = self.append_expr(value);
-                self.var_definition(name.clone(), annot.clone(), init, *mutable);
-            }
-            Stmt::VarAssign { name, value } => {
-                let val = self.append_expr(value);
-                self.var_assignment(name, val);
-            }
-            Stmt::PrintExpr { value } => {
-                self.append_print_expr(value);
-            }
-            Stmt::PrintString { value } => {
-                self.append_print_string(value);
-            }
-            Stmt::FnDef {
-                name,
-                params,
-                ret_type,
-                body,
-            } => {
-                self.append_fn_def(name, params, ret_type, body);
-            }
-            Stmt::FnCall { name, args } => {
-                self.append_fn_call(name, args);
-            }
-            Stmt::Return { value } => {
-                self.append_return(value.as_deref());
-            }
-        }
-    }
-
     /* -------------------------------------------------------------------------- */
     /*                                MAIN                                        */
     /* -------------------------------------------------------------------------- */
@@ -308,63 +312,6 @@ impl CodeGen {
             self.append_stmt(stmt);
         }
         self.end_main();
-    }
-
-    /* -------------------------------------------------------------------------- */
-    /*                                EXPRESSION                                  */
-    /* -------------------------------------------------------------------------- */
-
-    pub fn append_expr(&mut self, expr: &Expr) -> Value {
-        match expr {
-            Expr::Int(i) => Value::new_val(i.to_string(), Type::Int),
-            Expr::Double(d) => Value::new_val(format!("{:?}", d), Type::Double),
-            Expr::Var(name) => {
-                let addr = self.lookup_lvalue(name);
-                self.rvalue(&addr)
-            }
-            Expr::BinaryOp { lhs, operator, rhs } => {
-                let lhs_val = self.append_expr(lhs);
-                let rhs_val = self.append_expr(rhs);
-                self.binop(operator.clone(), &lhs_val, &rhs_val)
-            }
-            Expr::Call { name, args } => self.append_fn_call(name, args),
-        }
-    }
-
-    pub fn binop(&mut self, op: Op, lhs: &Value, rhs: &Value) -> Value {
-        let lhs = self.rvalue(lhs);
-        let rhs = self.rvalue(rhs);
-
-        if lhs.ty != rhs.ty {
-            self.error("Type mismatch in binary expression.");
-            return Value::new_val("%undef", Type::Unknown);
-        }
-
-        let instr = match (&lhs.ty, op) {
-            (Type::Int, Op::Add) => "add",
-            (Type::Int, Op::Sub) => "sub",
-            (Type::Int, Op::Mul) => "mul",
-            (Type::Int, Op::Div) => "sdiv",
-            (Type::Double, Op::Add) => "fadd",
-            (Type::Double, Op::Sub) => "fsub",
-            (Type::Double, Op::Mul) => "fmul",
-            (Type::Double, Op::Div) => "fdiv",
-            _ => {
-                self.error("Unsupported operand type for binary expression.");
-                return Value::new_val("%undef", Type::Unknown);
-            }
-        };
-
-        let tmp = self.new_tmp();
-        self.append(&format!(
-            "{} = {} {} {}, {}",
-            tmp,
-            instr,
-            lhs.ty.llvm(),
-            lhs.repr,
-            rhs.repr
-        ));
-        Value::new_val(tmp, lhs.ty)
     }
 
     /* -------------------------------------------------------------------------- */
@@ -584,5 +531,138 @@ impl CodeGen {
             args_str
         ));
         Value::new_val(tmp, fn_info.ret_type)
+    }
+
+    /* -------------------------------------------------------------------------- */
+    /*                                EXPRESSION                                  */
+    /* -------------------------------------------------------------------------- */
+
+    pub fn append_expr(&mut self, expr: &Expr) -> Value {
+        match expr {
+            Expr::Int(i) => Value::new_val(i.to_string(), Type::Int),
+            Expr::Double(d) => Value::new_val(format!("{:?}", d), Type::Double),
+            Expr::Var(name) => {
+                let addr = self.lookup_lvalue(name);
+                self.rvalue(&addr)
+            }
+            Expr::BinaryOp { lhs, operator, rhs } => {
+                let lhs_val = self.append_expr(lhs);
+                let rhs_val = self.append_expr(rhs);
+                self.binop(operator.clone(), &lhs_val, &rhs_val)
+            }
+            Expr::Call { name, args } => self.append_fn_call(name, args),
+        }
+    }
+
+    pub fn binop(&mut self, op: Op, lhs: &Value, rhs: &Value) -> Value {
+        let lhs = self.rvalue(lhs);
+        let rhs = self.rvalue(rhs);
+
+        if lhs.ty != rhs.ty {
+            self.error("Type mismatch in binary expression.");
+            return Value::new_val("%undef", Type::Unknown);
+        }
+
+        let tmp = self.new_tmp();
+
+        match (&lhs.ty, op.clone()) {
+            // ---------------- ARITMETIC INT ----------------
+            (Type::Int, Op::Add) => {
+                self.append(&format!("{} = add i32 {}, {}", tmp, lhs.repr, rhs.repr))
+            }
+            (Type::Int, Op::Sub) => {
+                self.append(&format!("{} = sub i32 {}, {}", tmp, lhs.repr, rhs.repr))
+            }
+            (Type::Int, Op::Mul) => {
+                self.append(&format!("{} = mul i32 {}, {}", tmp, lhs.repr, rhs.repr))
+            }
+            (Type::Int, Op::Div) => {
+                self.append(&format!("{} = sdiv i32 {}, {}", tmp, lhs.repr, rhs.repr))
+            }
+
+            // ---------------- ARITMETIC DOUBLE ----------------
+            (Type::Double, Op::Add) => {
+                self.append(&format!("{} = fadd double {}, {}", tmp, lhs.repr, rhs.repr))
+            }
+            (Type::Double, Op::Sub) => {
+                self.append(&format!("{} = fsub double {}, {}", tmp, lhs.repr, rhs.repr))
+            }
+            (Type::Double, Op::Mul) => {
+                self.append(&format!("{} = fmul double {}, {}", tmp, lhs.repr, rhs.repr))
+            }
+            (Type::Double, Op::Div) => {
+                self.append(&format!("{} = fdiv double {}, {}", tmp, lhs.repr, rhs.repr))
+            }
+
+            // ---------------- COMPARISON INT ----------------
+            (Type::Int, Op::Eq) => {
+                self.append(&format!("{} = icmp eq i32 {}, {}", tmp, lhs.repr, rhs.repr))
+            }
+            (Type::Int, Op::Ne) => {
+                self.append(&format!("{} = icmp ne i32 {}, {}", tmp, lhs.repr, rhs.repr))
+            }
+            (Type::Int, Op::Lt) => self.append(&format!(
+                "{} = icmp slt i32 {}, {}",
+                tmp, lhs.repr, rhs.repr
+            )),
+            (Type::Int, Op::Le) => self.append(&format!(
+                "{} = icmp sle i32 {}, {}",
+                tmp, lhs.repr, rhs.repr
+            )),
+            (Type::Int, Op::Gt) => self.append(&format!(
+                "{} = icmp sgt i32 {}, {}",
+                tmp, lhs.repr, rhs.repr
+            )),
+            (Type::Int, Op::Ge) => self.append(&format!(
+                "{} = icmp sge i32 {}, {}",
+                tmp, lhs.repr, rhs.repr
+            )),
+
+            // ---------------- COMPARISON DOUBLE ----------------
+            (Type::Double, Op::Eq) => self.append(&format!(
+                "{} = fcmp oeq double {}, {}",
+                tmp, lhs.repr, rhs.repr
+            )),
+            (Type::Double, Op::Ne) => self.append(&format!(
+                "{} = fcmp one double {}, {}",
+                tmp, lhs.repr, rhs.repr
+            )),
+            (Type::Double, Op::Lt) => self.append(&format!(
+                "{} = fcmp olt double {}, {}",
+                tmp, lhs.repr, rhs.repr
+            )),
+            (Type::Double, Op::Le) => self.append(&format!(
+                "{} = fcmp ole double {}, {}",
+                tmp, lhs.repr, rhs.repr
+            )),
+            (Type::Double, Op::Gt) => self.append(&format!(
+                "{} = fcmp ogt double {}, {}",
+                tmp, lhs.repr, rhs.repr
+            )),
+            (Type::Double, Op::Ge) => self.append(&format!(
+                "{} = fcmp oge double {}, {}",
+                tmp, lhs.repr, rhs.repr
+            )),
+
+            // ---------------- BOOLEAN ----------------
+            (Type::Bool, Op::And) => {
+                self.append(&format!("{} = and i1 {}, {}", tmp, lhs.repr, rhs.repr))
+            }
+            (Type::Bool, Op::Or) => {
+                self.append(&format!("{} = or i1 {}, {}", tmp, lhs.repr, rhs.repr))
+            }
+
+            _ => {
+                self.error("Unsupported operand type for binary expression.");
+                return Value::new_val("%undef", Type::Unknown);
+            }
+        }
+
+        let result_ty = match op {
+            Op::Eq | Op::Ne | Op::Lt | Op::Le | Op::Gt | Op::Ge | Op::And | Op::Or => Type::Bool,
+            _ => lhs.ty.clone(),
+        };
+
+        Value::new_val(tmp, result_ty)
     }
 }

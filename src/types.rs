@@ -6,6 +6,7 @@ pub enum Type {
     Int,                     // i32
     Double,                  // double
     Unit,                    // i8 with value 0 in LLVM
+    Bool,                    // i1
     Array(Box<Type>, usize), // [T; N]
 }
 
@@ -16,6 +17,7 @@ impl Type {
             Type::Int => "i32".into(),
             Type::Double => "double".into(),
             Type::Unit => "i8".into(),
+            Type::Bool => "i1".into(),
             Type::Array(elem, n) => format!("[{} x {}]", n, elem.llvm()),
         }
     }
@@ -26,6 +28,7 @@ impl Type {
             Type::Int => 4,
             Type::Double => 8,
             Type::Unit => 1,
+            Type::Bool => 1,
             Type::Array(elem, _n) => elem.align(),
         }
     }
@@ -36,6 +39,7 @@ impl Type {
             Type::Int => Some(4),
             Type::Double => Some(8),
             Type::Unit => Some(1),
+            Type::Bool => Some(1),
             Type::Array(elem, n) => elem.size_bytes().map(|s| s * *n),
         }
     }
@@ -48,6 +52,7 @@ impl fmt::Display for Type {
             Type::Int => write!(f, "Int"),
             Type::Double => write!(f, "Double"),
             Type::Unit => write!(f, "Unit"),
+            Type::Bool => write!(f, "Bool"),
             Type::Array(t, n) => write!(f, "[{}; {}]", t, n),
         }
     }
