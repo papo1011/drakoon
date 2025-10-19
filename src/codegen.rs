@@ -427,8 +427,8 @@ impl CodeGen {
             );
         }
 
-        // Real byte length is the raw UTF-8 size plus the trailing null terminator.
-        let bytes = text.as_bytes().len() + 1;
+        // Byte length is the raw UTF-8 size plus the trailing null terminator.
+        let bytes = text.len() + 1;
 
         // Escape characters that would break the LLVM string literal syntax.
         let escaped = text
@@ -836,5 +836,11 @@ impl CodeGen {
         };
 
         Value::new_val(tmp, result_ty)
+    }
+}
+
+impl Default for CodeGen {
+    fn default() -> Self {
+        Self::new()
     }
 }

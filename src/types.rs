@@ -1,7 +1,8 @@
 use std::fmt;
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Default)]
 pub enum Type {
+    #[default]
     Unknown,
     Int,                     // i32
     Double,                  // double
@@ -55,12 +56,6 @@ impl fmt::Display for Type {
             Type::Bool => write!(f, "Bool"),
             Type::Array(t, n) => write!(f, "[{}; {}]", t, n),
         }
-    }
-}
-
-impl Default for Type {
-    fn default() -> Self {
-        Type::Unknown
     }
 }
 
