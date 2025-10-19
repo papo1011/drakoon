@@ -149,7 +149,7 @@ fn test_simple_function() {
         tokens,
         vec![
             Token::Fn,
-            Token::Id("main".to_string()),
+            Token::Main,
             Token::LParen,
             Token::RParen,
             Token::LBrace,
@@ -171,7 +171,7 @@ fn test_whitespace_skipping() {
         tokens,
         vec![
             Token::Fn,
-            Token::Id("main".to_string()),
+            Token::Main,
             Token::LParen,
             Token::RParen,
             Token::LBrace,
@@ -260,7 +260,7 @@ fn test_token_positions() {
 
     // Check second token (main)
     let (start, token, end) = results[1].as_ref().unwrap();
-    assert_eq!(*token, Token::Id("main".to_string()));
+    assert_eq!(*token, Token::Main);
     assert_eq!(*start, 3);
     assert_eq!(*end, 7);
 }
@@ -279,7 +279,7 @@ fn test_multiline_positions() {
 
     // Check second token: main - on line 2
     let (start, token, end) = results[1].as_ref().unwrap();
-    assert_eq!(*token, Token::Id("main".to_string()));
+    assert_eq!(*token, Token::Main);
     assert_eq!(*start, 3);
     assert_eq!(*end, 7);
 
