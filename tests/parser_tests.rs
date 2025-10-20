@@ -151,3 +151,111 @@ fn if_statement_without_else() {
         "[FnDef { name: \"check\", params: [(\"value\", Int)], ret_type: Int, body: [If { cond: BinaryOp { lhs: Var(\"value\"), operator: Gt, rhs: Int(0) }, then_body: [PrintString { value: \"value is positive\" }, Return { value: Some(Int(1)) }], else_body: None }, Return { value: Some(Int(0)) }] }]"
     );
 }
+
+#[test]
+fn while_simple_increment() {
+    let mbt = r#"
+        fn inc_until(n: Int) -> Int {
+            let mut i = 0
+            while i < n {
+                i = i + 1
+            }
+            return i
+        }
+    "#;
+
+    let lexer = Lexer::new(mbt);
+    let ast = ScriptParser::new().parse(lexer).unwrap();
+
+    assert_eq!(
+        &format!("{:?}", ast),
+        "[FnDef { name: \"inc_until\", params: [(\"n\", Int)], ret_type: Int, body: [VarDef { name: \"i\", annot: None, value: Int(0), mutable: true }, While { cond: BinaryOp { lhs: Var(\"i\"), operator: Lt, rhs: Var(\"n\") }, body: [VarAssign { name: \"i\", value: BinaryOp { lhs: Var(\"i\"), operator: Add, rhs: Int(1) } }] }, Return { value: Some(Var(\"i\")) }] }]"
+    );
+}
+
+#[test]
+fn for_full_init_cond_step() {
+    let mbt = r#"
+        fn sum_to(n: Int) -> Int {
+            let mut s = 0
+            for i = 0; i < n; i = i + 1 {
+                s = s + i
+            }
+            return s
+        }
+    "#;
+
+    let lexer = Lexer::new(mbt);
+    let ast = ScriptParser::new().parse(lexer).unwrap();
+
+    assert_eq!(
+        &format!("{:?}", ast),
+        "[FnDef { name: \"sum_to\", params: [(\"n\", Int)], ret_type: Int, body: [VarDef { name: \"s\", annot: None, value: Int(0), mutable: true }, For { init: Some(VarDef { name: \"i\", annot: None, value: Int(0), mutable: true }), cond: Some(BinaryOp { lhs: Var(\"i\"), operator: Lt, rhs: Var(\"n\") }), step: Some(VarAssign { name: \"i\", value: BinaryOp { lhs: Var(\"i\"), operator: Add, rhs: Int(1) } }), body: [VarAssign { name: \"s\", value: BinaryOp { lhs: Var(\"s\"), operator: Add, rhs: Var(\"i\") } }] }, Return { value: Some(Var(\"s\")) }] }]"
+    );
+}
+
+#[test]
+fn for_without_cond_infinite() {
+    let mbt = r#"
+        fn first_over_three() -> Int {
+            let mut i = 0
+            for i = 0; ; i = i + 1 {
+                if i > 3 {
+                    return i
+                }
+            }
+        }
+    "#;
+
+    let lexer = Lexer::new(mbt);
+    let ast = ScriptParser::new().parse(lexer).unwrap();
+
+    assert_eq!(
+        &format!("{:?}", ast),
+        "[FnDef { name: \"first_over_three\", params: [], ret_type: Int, body: [VarDef { name: \"i\", annot: None, value: Int(0), mutable: true }, For { init: Some(VarDef { name: \"i\", annot: None, value: Int(0), mutable: true }), cond: None, step: Some(VarAssign { name: \"i\", value: BinaryOp { lhs: Var(\"i\"), operator: Add, rhs: Int(1) } }), body: [If { cond: BinaryOp { lhs: Var(\"i\"), operator: Gt, rhs: Int(3) }, then_body: [Return { value: Some(Var(\"i\")) }], else_body: None }] }] }]"
+    );
+}
+
+#[test]
+fn for_only_cond() {
+    let mbt = r#"
+        fn count_up_to_ten() -> Int {
+            let mut i = 0
+            for ; i < 10; {
+                i = i + 1
+            }
+            return i
+        }
+    "#;
+
+    let lexer = Lexer::new(mbt);
+    let ast = ScriptParser::new().parse(lexer).unwrap();
+
+    assert_eq!(
+        &format!("{:?}", ast),
+        "[FnDef { name: \"count_up_to_ten\", params: [], ret_type: Int, body: [VarDef { name: \"i\", annot: None, value: Int(0), mutable: true }, For { init: None, cond: Some(BinaryOp { lhs: Var(\"i\"), operator: Lt, rhs: Int(10) }), step: None, body: [VarAssign { name: \"i\", value: BinaryOp { lhs: Var(\"i\"), operator: Add, rhs: Int(1) } }] }, Return { value: Some(Var(\"i\")) }] }]"
+    );
+}
+
+#[test]
+fn nested_while_inside_for() {
+    let mbt = r#"
+        fn nested() -> Unit {
+            let mut i = 0
+            for i = 0; i < 2; i = i + 1 {
+                while i < 2 {
+                    println(i)
+                    i = i + 1
+                }
+            }
+        }
+    "#;
+
+    let lexer = Lexer::new(mbt);
+    let ast = ScriptParser::new().parse(lexer).unwrap();
+
+    assert_eq!(
+        &format!("{:?}", ast),
+        "[FnDef { name: \"nested\", params: [], ret_type: Unit, body: [VarDef { name: \"i\", annot: None, value: Int(0), mutable: true }, For { init: Some(VarDef { name: \"i\", annot: None, value: Int(0), mutable: true }), cond: Some(BinaryOp { lhs: Var(\"i\"), operator: Lt, rhs: Int(2) }), step: Some(VarAssign { name: \"i\", value: BinaryOp { lhs: Var(\"i\"), operator: Add, rhs: Int(1) } }), body: [While { cond: BinaryOp { lhs: Var(\"i\"), operator: Lt, rhs: Int(2) }, body: [PrintExpr { value: Var(\"i\") }, VarAssign { name: \"i\", value: BinaryOp { lhs: Var(\"i\"), operator: Add, rhs: Int(1) } }] }] }] }]"
+    );
+}
