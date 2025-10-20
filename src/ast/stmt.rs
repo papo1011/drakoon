@@ -43,7 +43,7 @@ pub enum Stmt {
     },
     If {
         cond: Box<Expr>,
-        then_branch: Box<Stmt>,
-        else_branch: Option<Box<Stmt>>,
+        then_body: Vec<Stmt>,
+        else_body: Option<Vec<Stmt>>,
     },
 }

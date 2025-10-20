@@ -32,15 +32,15 @@ pub StmtMainDef: ast::Stmt = {
 }
 
 StmtIf: ast::Stmt = {
-    "if" <cond:Expr> "{" <then_branch:Stmt> "}" => ast::Stmt::If {
+    "if" <cond:Expr> "{" <then_body:Stmt*> "}" => ast::Stmt::If {
         cond,
-        then_branch: Box::new(then_branch),
-        else_branch: None,
+        then_body,
+        else_body: None,
     },
-    "if" <cond:Expr> "{" <then_branch:Stmt> "}" "else" "{" <else_branch:Stmt> "}" => ast::Stmt::If {
+    "if" <cond:Expr> "{" <then_body:Stmt*> "}" "else" "{" <else_body:Stmt*> "}" => ast::Stmt::If {
         cond,
-        then_branch: Box::new(then_branch),
-        else_branch: Some(Box::new(else_branch)),
+        then_body,
+        else_body: Some(else_body),
     },
 };
 

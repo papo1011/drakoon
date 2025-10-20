@@ -243,10 +243,10 @@ impl CodeGen {
             }
             Stmt::If {
                 cond,
-                then_branch,
-                else_branch,
+                then_body,
+                else_body,
             } => {
-                self.append_if_else(cond, then_branch, else_branch.as_deref());
+                self.append_if_else(cond, then_body, else_body.as_deref());
             }
         }
     }
@@ -663,7 +663,7 @@ impl CodeGen {
     /*                                 IF ELSE                                    */
     /* -------------------------------------------------------------------------- */
 
-    fn append_if_else(&mut self, cond: &Expr, then_branch: &Stmt, else_branch: Option<&Stmt>) {
+    fn append_if_else(&mut self, cond: &Expr, then_body: &[Stmt], else_body: Option<&[Stmt]>) {
         let c = self.append_expr(cond);
         let cond_repr = if c.ty == Type::Bool {
             c.repr
@@ -676,8 +676,8 @@ impl CodeGen {
         let then_lbl = format!("if.then.{}", id);
         let end_lbl = format!("if.end.{}", id);
 
-        match else_branch {
-            Some(eb) => {
+        match else_body {
+            Some(ebody) => {
                 let else_lbl = format!("if.else.{}", id);
                 self.append(&format!(
                     "br i1 {}, label %{}, label %{}",
@@ -685,11 +685,15 @@ impl CodeGen {
                 ));
 
                 self.append_label(&then_lbl);
-                self.append_stmt(then_branch);
+                for s in then_body {
+                    self.append_stmt(s);
+                }
                 self.append(&format!("br label %{}", end_lbl));
 
                 self.append_label(&else_lbl);
-                self.append_stmt(eb);
+                for s in ebody {
+                    self.append_stmt(s);
+                }
                 self.append(&format!("br label %{}", end_lbl));
             }
             None => {
@@ -699,7 +703,9 @@ impl CodeGen {
                 ));
 
                 self.append_label(&then_lbl);
-                self.append_stmt(then_branch);
+                for s in then_body {
+                    self.append_stmt(s);
+                }
                 self.append(&format!("br label %{}", end_lbl));
             }
         }
