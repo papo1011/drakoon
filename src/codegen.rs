@@ -614,7 +614,10 @@ impl CodeGen {
 
         let params_str = params
             .iter()
-            .map(|(n, t)| format!("{} %{}", t.llvm(), n))
+            .map(|(n, t)| match t {
+                Type::FixedArray(_, _) => format!("{}* %{}", t.llvm(), n),
+                _ => format!("{} %{}", t.llvm(), n),
+            })
             .collect::<Vec<_>>()
             .join(", ");
 
@@ -630,11 +633,15 @@ impl CodeGen {
         self.ret_type = None;
         self.enter_scope();
         for (n, t) in params {
+            let val = match t {
+                Type::FixedArray(_, _) => Value::new_addr(format!("%{}", n), t.clone()),
+                _ => Value::new_val(format!("%{}", n), t.clone()),
+            };
             self.current_scope_mut().vars.insert(
                 n.clone(),
                 ValueObj {
                     name: n.clone(),
-                    val: Value::new_val(format!("%{}", n), t.clone()),
+                    val,
                     mutable: false,
                 },
             );
@@ -715,21 +722,61 @@ impl CodeGen {
 
         let mut arg_vals = Vec::new();
         for (arg_expr, (param_name, param_type)) in args.iter().zip(fn_info.params.iter()) {
-            let arg_val = self.append_expr(arg_expr);
-            if !types_compatible(&arg_val.ty, param_type) {
-                self.error(&format!(
-                    "Type mismatch in argument '{}' of call to '{}': expected {}, got {}",
-                    param_name, name, param_type, arg_val.ty
-                ));
-                return Value::new_val("%undef", Type::Unknown);
+            match param_type {
+                Type::FixedArray(_, _) => {
+                    match arg_expr {
+                        Expr::Var(var_name) => {
+                            let addr = self.lookup_lvalue(var_name);
+                            if !matches!(addr.ty, Type::FixedArray(_, _)) {
+                                self.error(&format!(
+                                    "Parameter '{}' expects FixedArray, got {}",
+                                    param_name, addr.ty
+                                ));
+                                return Value::new_val("%undef", Type::Unknown);
+                            }
+                            if !types_compatible(&addr.ty, param_type) {
+                                self.error(&format!(
+                                    "Type mismatch in parameter '{}': expected {}, got {}",
+                                    param_name, param_type, addr.ty
+                                ));
+                                return Value::new_val("%undef", Type::Unknown);
+                            }
+                            arg_vals.push(addr); // indirizzo
+                        }
+                        _ => {
+                            self.error(&format!(
+                                "Parameter '{}' expects an array variable passed by reference",
+                                param_name
+                            ));
+                            return Value::new_val("%undef", Type::Unknown);
+                        }
+                    }
+                }
+                _ => {
+                    let v = self.append_expr(arg_expr);
+                    if !types_compatible(&v.ty, param_type) {
+                        self.error(&format!(
+                            "Type mismatch in parameter '{}': expected {}, got {}",
+                            param_name, param_type, v.ty
+                        ));
+                        return Value::new_val("%undef", Type::Unknown);
+                    }
+                    arg_vals.push(v);
+                }
             }
-            arg_vals.push(arg_val);
         }
 
         let tmp = self.new_tmp();
         let args_str = arg_vals
             .iter()
-            .map(|v| format!("{} {}", v.ty.llvm(), v.repr))
+            .map(|v| {
+                let ty = if v.is_addr {
+                    format!("{}*", v.ty.llvm())
+                } else {
+                    v.ty.llvm()
+                };
+                format!("{} {}", ty, v.repr)
+            })
             .collect::<Vec<_>>()
             .join(", ");
 

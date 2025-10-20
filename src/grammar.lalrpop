@@ -105,7 +105,14 @@ pub ParamList: Vec<(String, Type)> = {
 }
 
 pub Param: (String, Type) = {
-  <name:"id"> ":" <ty:BasicType> => (name, ty)
+  <name:"id"> ":" <ty:ParamType> => (name, ty)
+}
+
+pub ParamType: Type = {
+  BasicType,
+  "FixedArray" "[" <elem:BasicType> ";" <n:"int"> "]" => {
+    Type::FixedArray(Box::new(elem), n.try_into().unwrap())
+  },
 }
 
 pub StmtVarDef: ast::Stmt = {
