@@ -22,6 +22,12 @@ pub enum Stmt {
         name: String,
         value: Box<Expr>,
     },
+    FixedArrayDef {
+        name: String,
+        annot: Type,
+        values: Vec<Expr>,
+        mutable: bool,
+    },
     PrintExpr {
         value: Box<Expr>,
     },

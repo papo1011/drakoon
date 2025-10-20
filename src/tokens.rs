@@ -41,6 +41,8 @@ pub enum Token {
     UnitType,
     #[token("Bool")]
     BoolType,
+    #[token("FixedArray")]
+    FixedArrayType,
 
     #[token("true")]
     True,
@@ -77,6 +79,10 @@ pub enum Token {
     LBrace,
     #[token("}")]
     RBrace,
+    #[token("[")]
+    LBracket,
+    #[token("]")]
+    RBracket,
     #[token("(")]
     LParen,
     #[token(")")]

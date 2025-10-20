@@ -138,7 +138,7 @@ impl CodeGen {
     /// cannot be used directly in expressions.
     pub fn rvalue(&mut self, v: &Value) -> Value {
         if v.is_addr {
-            if matches!(v.ty, Type::Array(_, _)) {
+            if matches!(v.ty, Type::FixedArray(_, _)) {
                 self.error(
                     "Cannot use array value directly in expression; index it or pass its address.",
                 );
@@ -220,6 +220,14 @@ impl CodeGen {
             Stmt::VarAssign { name, value } => {
                 let val = self.append_expr(value);
                 self.var_assignment(name, val);
+            }
+            Stmt::FixedArrayDef {
+                name,
+                annot,
+                values,
+                mutable,
+            } => {
+                self.append_fixed_array_def(name, annot, values, *mutable);
             }
             Stmt::PrintExpr { value } => {
                 self.append_print_expr(value);
@@ -386,6 +394,72 @@ impl CodeGen {
         }
 
         self.store_scalar(&addr, &rhs);
+    }
+
+    /* -------------------------------------------------------------------------- */
+    /*                               ARRAY                                        */
+    /* -------------------------------------------------------------------------- */
+
+    pub fn append_fixed_array_def(
+        &mut self,
+        name: &str,
+        annot: &Type,
+        values: &[Expr],
+        mutable: bool,
+    ) {
+        if !self.is_name_available(name) {
+            self.error(&format!(
+                "Variable '{}' already declared in this scope",
+                name
+            ));
+        }
+
+        let (elem_ty, computed_len) = match annot {
+            Type::FixedArray(elem, n) => ((**elem).clone(), *n),
+            other => {
+                self.error(&format!(
+                    "Annotation for '{}' must be FixedArray, found {}",
+                    name, other
+                ));
+                return;
+            }
+        };
+
+        let addr = self.alloca_of_type(name, annot);
+
+        for i in 0..computed_len {
+            let v = self.append_expr(&values[i]);
+            if !types_compatible(&elem_ty, &v.ty) {
+                self.error(&format!(
+                    "Type mismatch initializing '{}[{}]': expected {}, got {}",
+                    name, i, elem_ty, v.ty
+                ));
+                continue;
+            }
+
+            // GEP: ([N x T]*, 0, i) -> T*
+            let gep = self.new_tmp();
+            self.append(&format!(
+                "{} = getelementptr inbounds {}, {}* {}, i32 0, i32 {}",
+                gep,
+                annot.llvm(),
+                annot.llvm(),
+                addr.repr,
+                i
+            ));
+
+            let elem_addr = Value::new_addr(gep, elem_ty.clone());
+            self.store_scalar(&elem_addr, &v);
+        }
+
+        self.current_scope_mut().vars.insert(
+            name.to_string(),
+            ValueObj {
+                name: name.to_string(),
+                val: addr,
+                mutable,
+            },
+        );
     }
 
     /* -------------------------------------------------------------------------- */

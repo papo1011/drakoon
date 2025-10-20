@@ -17,6 +17,7 @@ pub GlobalStmt: ast::Stmt = {
 pub Stmt: ast::Stmt = {
   StmtVarDef,
   StmtVarAssign,
+  StmtFixedArrayDef,
   StmtPrint,
   StmtFnCall,
   StmtReturn,
@@ -67,7 +68,7 @@ pub StmtReturn: ast::Stmt = {
 }
 
 pub StmtFnDef: ast::Stmt = {
-  "fn" <name:"id"> "(" <params:ParamList?> ")" "->" <ret:Type> "{" <body:Stmt*> "}" => {
+  "fn" <name:"id"> "(" <params:ParamList?> ")" "->" <ret:BasicType> "{" <body:Stmt*> "}" => {
     ast::Stmt::FnDef {
         name,
         params: params.unwrap_or_default(),
@@ -104,7 +105,7 @@ pub ParamList: Vec<(String, Type)> = {
 }
 
 pub Param: (String, Type) = {
-  <name:"id"> ":" <ty:Type> => (name, ty)
+  <name:"id"> ":" <ty:BasicType> => (name, ty)
 }
 
 pub StmtVarDef: ast::Stmt = {
@@ -114,11 +115,24 @@ pub StmtVarDef: ast::Stmt = {
   "let" "mut" <name:"id"> "=" <value:Expr>  => {
     ast::Stmt::VarDef { name, annot: None, value, mutable: true }
   },
-  "let" <name:"id"> ":" <annot:Type> "=" <value:Expr>  => {
+  "let" <name:"id"> ":" <annot:BasicType> "=" <value:Expr>  => {
     ast::Stmt::VarDef { name, annot: Some(annot), value, mutable: false }
   },
-  "let" "mut" <name:"id"> ":" <annot:Type> "=" <value:Expr>  => {
+  "let" "mut" <name:"id"> ":" <annot:BasicType> "=" <value:Expr>  => {
     ast::Stmt::VarDef { name, annot: Some(annot), value, mutable: true }
+  },
+}
+
+pub StmtFixedArrayDef: ast::Stmt = {
+  "let" <name:"id"> ":" "FixedArray" "[" <elem:BasicType> "]" "=" "[" <values:ExprList?> "]" => {
+    let vs: Vec<ast::Expr> = values.unwrap_or_default();
+    let n = vs.len();
+    ast::Stmt::FixedArrayDef { name, annot: Type::FixedArray(Box::new(elem), n), values: vs, mutable: false }
+  },
+  "let" "mut" <name:"id"> ":" "FixedArray" "[" <elem:BasicType> "]" "=" "[" <values:ExprList?> "]" => {
+    let vs: Vec<ast::Expr> = values.unwrap_or_default();
+    let n = vs.len();
+    ast::Stmt::FixedArrayDef { name, annot: Type::FixedArray(Box::new(elem), n), values: vs, mutable: true }
   },
 }
 
@@ -126,13 +140,13 @@ pub StmtGlobalVarDef: ast::Stmt = {
   "let" <name:"id"> "=" <value:BasicTerm>  => {
     ast::Stmt::GlobalVarDef { name, annot: None, value, is_const: false }
   },
-  "let" <name:"id"> ":" <annot:Type> "=" <value:BasicTerm>  => {
+  "let" <name:"id"> ":" <annot:BasicType> "=" <value:BasicTerm>  => {
     ast::Stmt::GlobalVarDef { name, annot: Some(annot), value, is_const: false }
   },
   "const" <name:"id"> "=" <value:BasicTerm>  => {
     ast::Stmt::GlobalVarDef { name, annot: None, value, is_const: true }
   },
-  "const" <name:"id"> ":" <annot:Type> "=" <value:BasicTerm>  => {
+  "const" <name:"id"> ":" <annot:BasicType> "=" <value:BasicTerm>  => {
     ast::Stmt::GlobalVarDef { name, annot: Some(annot), value, is_const: true }
   },
 }
@@ -143,7 +157,7 @@ pub StmtVarAssign: ast::Stmt = {
   },
 }
 
-pub Type: Type = {
+pub BasicType: Type = {
   "Int" => Type::Int,
   "Double" => Type::Double,
   "Unit" => Type::Unit,
@@ -241,6 +255,7 @@ extern {
         "Double" => Token::DoubleType,
         "Unit" => Token::UnitType,
         "Bool" => Token::BoolType,
+        "FixedArray" => Token::FixedArrayType,
         "true" => Token::True,
         "false" => Token::False,
         "==" => Token::Eq,
@@ -266,6 +281,8 @@ extern {
         "," => Token::Comma,
         "{" => Token::LBrace,
         "}" => Token::RBrace,
+        "[" => Token::LBracket,
+        "]" => Token::RBracket,
         "(" => Token::LParen,
         ")" => Token::RParen,
         "." => Token::Dot,
