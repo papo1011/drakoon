@@ -21,6 +21,8 @@ pub Stmt: ast::Stmt = {
   StmtFnCall,
   StmtReturn,
   StmtIf,
+  StmtWhile,
+  StmtFor,
 }
 
 pub StmtMainDef: ast::Stmt = {
@@ -43,6 +45,16 @@ StmtIf: ast::Stmt = {
         else_body: Some(else_body),
     },
 };
+
+pub StmtWhile: ast::Stmt = {
+  "while" <cond:Expr> "{" <body:Stmt*> "}" => ast::Stmt::While { cond, body },
+}
+
+pub StmtFor: ast::Stmt = {
+  "for" <init:  StmtVarDef?> ";" <cond:Expr?> ";" <step:StmtVarAssign?> "{" <body:Stmt*> "}" => {
+    ast::Stmt::For { init: init.map(Box::new), cond, step: step.map(Box::new), body }
+  },
+}
 
 pub StmtReturn: ast::Stmt = {
   "return" <value:Expr> => ast::Stmt::Return { value: Some(value) }

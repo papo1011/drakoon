@@ -46,4 +46,14 @@ pub enum Stmt {
         then_body: Vec<Stmt>,
         else_body: Option<Vec<Stmt>>,
     },
+    While {
+        cond: Box<Expr>,
+        body: Vec<Stmt>,
+    },
+    For {
+        init: Option<Box<Stmt>>,
+        cond: Option<Box<Expr>>,
+        step: Option<Box<Stmt>>,
+        body: Vec<Stmt>,
+    },
 }
