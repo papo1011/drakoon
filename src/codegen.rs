@@ -388,6 +388,7 @@ impl CodeGen {
         }
         self.functions.insert("main".to_string(), FnInfo::default());
         self.append("define i32 @main() {");
+        self.append("entry:");
     }
 
     pub fn end_main(&mut self) {
@@ -539,6 +540,8 @@ impl CodeGen {
             name,
             params_str
         ));
+
+        self.append("entry:");
 
         self.ret_type = None;
         self.enter_scope();
