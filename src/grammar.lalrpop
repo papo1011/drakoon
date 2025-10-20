@@ -50,8 +50,14 @@ pub StmtWhile: ast::Stmt = {
   "while" <cond:Expr> "{" <body:Stmt*> "}" => ast::Stmt::While { cond, body },
 }
 
+pub StmtVarDefFor: ast::Stmt = {
+  <name:"id"> "=" <value:Expr>  => {
+    ast::Stmt::VarDef { name, annot: None, value, mutable: true }
+  },
+}
+
 pub StmtFor: ast::Stmt = {
-  "for" <init:  StmtVarDef?> ";" <cond:Expr?> ";" <step:StmtVarAssign?> "{" <body:Stmt*> "}" => {
+  "for" <init:StmtVarDefFor?> ";" <cond:Expr?> ";" <step:StmtVarAssign?> "{" <body:Stmt*> "}" => {
     ast::Stmt::For { init: init.map(Box::new), cond, step: step.map(Box::new), body }
   },
 }
