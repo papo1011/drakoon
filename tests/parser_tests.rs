@@ -114,8 +114,10 @@ fn if_else_statement() {
     let mbt = r#"
         fn check(value: Int) -> Int {
             if value > 0 {
+                println("value is positive")
                 return 1
             } else {
+                println("value is not positive")
                 return 0
             }
         }
@@ -126,6 +128,26 @@ fn if_else_statement() {
 
     assert_eq!(
         &format!("{:?}", expr),
-        "[FnDef { name: \"check\", params: [(\"value\", Int)], ret_type: Int, body: [If { cond: BinaryOp { lhs: Var(\"value\"), operator: Gt, rhs: Int(0) }, then_branch: Return { value: Some(Int(1)) }, else_branch: Some(Return { value: Some(Int(0)) }) }] }]"
+        "[FnDef { name: \"check\", params: [(\"value\", Int)], ret_type: Int, body: [If { cond: BinaryOp { lhs: Var(\"value\"), operator: Gt, rhs: Int(0) }, then_body: [PrintString { value: \"value is positive\" }, Return { value: Some(Int(1)) }], else_body: Some([PrintString { value: \"value is not positive\" }, Return { value: Some(Int(0)) }]) }] }]"
+    );
+}
+
+#[test]
+fn if_statement_without_else() {
+    let mbt = r#"
+        fn check(value: Int) -> Int {
+            if value > 0 {
+                println("value is positive")
+                return 1
+            }
+            return 0
+        }
+    "#;
+    let lexer = Lexer::new(mbt);
+    let expr = ScriptParser::new().parse(lexer).unwrap();
+
+    assert_eq!(
+        &format!("{:?}", expr),
+        "[FnDef { name: \"check\", params: [(\"value\", Int)], ret_type: Int, body: [If { cond: BinaryOp { lhs: Var(\"value\"), operator: Gt, rhs: Int(0) }, then_body: [PrintString { value: \"value is positive\" }, Return { value: Some(Int(1)) }], else_body: None }, Return { value: Some(Int(0)) }] }]"
     );
 }
