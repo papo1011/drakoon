@@ -259,3 +259,21 @@ fn nested_while_inside_for() {
         "[FnDef { name: \"nested\", params: [], ret_type: Unit, body: [VarDef { name: \"i\", annot: None, value: Int(0), mutable: true }, For { init: Some(VarDef { name: \"i\", annot: None, value: Int(0), mutable: true }), cond: Some(BinaryOp { lhs: Var(\"i\"), operator: Lt, rhs: Int(2) }), step: Some(VarAssign { name: \"i\", value: BinaryOp { lhs: Var(\"i\"), operator: Add, rhs: Int(1) } }), body: [While { cond: BinaryOp { lhs: Var(\"i\"), operator: Lt, rhs: Int(2) }, body: [PrintExpr { value: Var(\"i\") }, VarAssign { name: \"i\", value: BinaryOp { lhs: Var(\"i\"), operator: Add, rhs: Int(1) } }] }] }] }]"
     );
 }
+
+#[test]
+fn fixed_array_definition() {
+    let mbt = r#"
+        fn main {
+            let arr : FixedArray[Int] = [1, 2, 3, 4, 5]
+            println("Array defined")
+        }
+    "#;
+
+    let lexer = Lexer::new(mbt);
+    let ast = ScriptParser::new().parse(lexer).unwrap();
+
+    assert_eq!(
+        &format!("{:?}", ast),
+        "[MainDef { body: [FixedArrayDef { name: \"arr\", annot: FixedArray(Int, 5), values: [Int(1), Int(2), Int(3), Int(4), Int(5)], mutable: false }, PrintString { value: \"Array defined\" }] }]"
+    );
+}

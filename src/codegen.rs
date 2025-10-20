@@ -427,8 +427,8 @@ impl CodeGen {
 
         let addr = self.alloca_of_type(name, annot);
 
-        for i in 0..computed_len {
-            let v = self.append_expr(&values[i]);
+        for (i, value) in values.iter().enumerate().take(computed_len) {
+            let v = self.append_expr(value);
             if !types_compatible(&elem_ty, &v.ty) {
                 self.error(&format!(
                     "Type mismatch initializing '{}[{}]': expected {}, got {}",
@@ -437,7 +437,6 @@ impl CodeGen {
                 continue;
             }
 
-            // GEP: ([N x T]*, 0, i) -> T*
             let gep = self.new_tmp();
             self.append(&format!(
                 "{} = getelementptr inbounds {}, {}* {}, i32 0, i32 {}",
