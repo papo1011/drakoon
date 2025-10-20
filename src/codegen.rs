@@ -243,10 +243,21 @@ impl CodeGen {
             }
             Stmt::If {
                 cond,
-                then_branch,
-                else_branch,
+                then_body,
+                else_body,
             } => {
-                self.append_if_else(cond, then_branch, else_branch.as_deref());
+                self.append_if_else(cond, then_body, else_body.as_deref());
+            }
+            Stmt::While { cond, body } => {
+                self.append_while(cond, body);
+            }
+            Stmt::For {
+                init,
+                cond,
+                step,
+                body,
+            } => {
+                self.append_for(init.as_deref(), cond.as_deref(), step.as_deref(), body);
             }
         }
     }
@@ -663,7 +674,7 @@ impl CodeGen {
     /*                                 IF ELSE                                    */
     /* -------------------------------------------------------------------------- */
 
-    fn append_if_else(&mut self, cond: &Expr, then_branch: &Stmt, else_branch: Option<&Stmt>) {
+    fn append_if_else(&mut self, cond: &Expr, then_body: &[Stmt], else_body: Option<&[Stmt]>) {
         let c = self.append_expr(cond);
         let cond_repr = if c.ty == Type::Bool {
             c.repr
@@ -676,8 +687,8 @@ impl CodeGen {
         let then_lbl = format!("if.then.{}", id);
         let end_lbl = format!("if.end.{}", id);
 
-        match else_branch {
-            Some(eb) => {
+        match else_body {
+            Some(ebody) => {
                 let else_lbl = format!("if.else.{}", id);
                 self.append(&format!(
                     "br i1 {}, label %{}, label %{}",
@@ -685,11 +696,15 @@ impl CodeGen {
                 ));
 
                 self.append_label(&then_lbl);
-                self.append_stmt(then_branch);
+                for s in then_body {
+                    self.append_stmt(s);
+                }
                 self.append(&format!("br label %{}", end_lbl));
 
                 self.append_label(&else_lbl);
-                self.append_stmt(eb);
+                for s in ebody {
+                    self.append_stmt(s);
+                }
                 self.append(&format!("br label %{}", end_lbl));
             }
             None => {
@@ -699,12 +714,98 @@ impl CodeGen {
                 ));
 
                 self.append_label(&then_lbl);
-                self.append_stmt(then_branch);
+                for s in then_body {
+                    self.append_stmt(s);
+                }
                 self.append(&format!("br label %{}", end_lbl));
             }
         }
 
         self.append_label(&end_lbl);
+    }
+
+    /* -------------------------------------------------------------------------- */
+    /*                                WHILE                                       */
+    /* -------------------------------------------------------------------------- */
+
+    fn append_while(&mut self, cond: &Expr, body: &[Stmt]) {
+        let id = self.next_label_id();
+        let l_cond = format!("while.cond.{}", id);
+        let l_body = format!("while.body.{}", id);
+        let l_end = format!("while.end.{}", id);
+
+        self.append(&format!("br label %{}", l_cond));
+        self.append_label(&l_cond);
+
+        let c = self.append_expr(cond);
+        if c.ty != Type::Bool {
+            self.error("While condition must be Bool");
+        }
+        self.append(&format!(
+            "br i1 {}, label %{}, label %{}",
+            c.repr, l_body, l_end
+        ));
+
+        self.append_label(&l_body);
+        for s in body {
+            self.append_stmt(s);
+        }
+        self.append(&format!("br label %{}", l_cond));
+
+        self.append_label(&l_end);
+    }
+
+    /* -------------------------------------------------------------------------- */
+    /*                                  FOR                                       */
+    /* -------------------------------------------------------------------------- */
+
+    fn append_for(
+        &mut self,
+        init: Option<&Stmt>,
+        cond: Option<&Expr>,
+        step: Option<&Stmt>,
+        body: &[Stmt],
+    ) {
+        let id = self.next_label_id();
+        let l_cond = format!("for.cond.{}", id);
+        let l_body = format!("for.body.{}", id);
+        let l_step = format!("for.step.{}", id);
+        let l_end = format!("for.end.{}", id);
+
+        if let Some(s) = init {
+            self.append_stmt(s);
+        }
+
+        self.append(&format!("br label %{}", l_cond));
+        self.append_label(&l_cond);
+
+        let cond_repr = if let Some(e) = cond {
+            let v = self.append_expr(e);
+            if v.ty != Type::Bool {
+                self.error("For condition must be Bool");
+            }
+            v.repr
+        } else {
+            "true".to_string()
+        };
+        self.append(&format!(
+            "br i1 {}, label %{}, label %{}",
+            cond_repr, l_body, l_end
+        ));
+
+        self.append_label(&l_body);
+        for s in body {
+            self.append_stmt(s);
+        }
+        self.append(&format!("br label %{}", l_step));
+
+        self.append_label(&l_step);
+        if let Some(s) = step {
+            self.append_stmt(s);
+        }
+        self.append(&format!("br label %{}", l_cond));
+
+        self.append_label(&l_end);
     }
 
     /* -------------------------------------------------------------------------- */

@@ -21,6 +21,8 @@ pub Stmt: ast::Stmt = {
   StmtFnCall,
   StmtReturn,
   StmtIf,
+  StmtWhile,
+  StmtFor,
 }
 
 pub StmtMainDef: ast::Stmt = {
@@ -32,17 +34,33 @@ pub StmtMainDef: ast::Stmt = {
 }
 
 StmtIf: ast::Stmt = {
-    "if" <cond:Expr> "{" <then_branch:Stmt> "}" => ast::Stmt::If {
+    "if" <cond:Expr> "{" <then_body:Stmt*> "}" => ast::Stmt::If {
         cond,
-        then_branch: Box::new(then_branch),
-        else_branch: None,
+        then_body,
+        else_body: None,
     },
-    "if" <cond:Expr> "{" <then_branch:Stmt> "}" "else" "{" <else_branch:Stmt> "}" => ast::Stmt::If {
+    "if" <cond:Expr> "{" <then_body:Stmt*> "}" "else" "{" <else_body:Stmt*> "}" => ast::Stmt::If {
         cond,
-        then_branch: Box::new(then_branch),
-        else_branch: Some(Box::new(else_branch)),
+        then_body,
+        else_body: Some(else_body),
     },
 };
+
+pub StmtWhile: ast::Stmt = {
+  "while" <cond:Expr> "{" <body:Stmt*> "}" => ast::Stmt::While { cond, body },
+}
+
+pub StmtVarDefFor: ast::Stmt = {
+  <name:"id"> "=" <value:Expr>  => {
+    ast::Stmt::VarDef { name, annot: None, value, mutable: true }
+  },
+}
+
+pub StmtFor: ast::Stmt = {
+  "for" <init:StmtVarDefFor?> ";" <cond:Expr?> ";" <step:StmtVarAssign?> "{" <body:Stmt*> "}" => {
+    ast::Stmt::For { init: init.map(Box::new), cond, step: step.map(Box::new), body }
+  },
+}
 
 pub StmtReturn: ast::Stmt = {
   "return" <value:Expr> => ast::Stmt::Return { value: Some(value) }
