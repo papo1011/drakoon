@@ -274,6 +274,6 @@ fn fixed_array_definition() {
 
     assert_eq!(
         &format!("{:?}", ast),
-        "[MainDef { body: [FixedArrayDef { name: \"arr\", annot: FixedArray(Int, 5), values: [Int(1), Int(2), Int(3), Int(4), Int(5)], mutable: false }, PrintString { value: \"Array defined\" }] }]"
+        "[MainDef { body: [FixedArrayDef { name: \"arr\", annot: FixedArray(Int, Some(5)), values: [Int(1), Int(2), Int(3), Int(4), Int(5)], mutable: false }, PrintString { value: \"Array defined\" }] }]"
     );
 }
