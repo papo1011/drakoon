@@ -193,6 +193,9 @@ pub Term: Box<ast::Expr> = {
     let args: Vec<ast::Expr> = args.unwrap_or_default();
     Box::new(ast::Expr::Call { name, args })
   },
+  <name:"id"> "[" <index:Expr> "]" => {
+    Box::new(ast::Expr::Index { name, index })
+  },
   <name:"id"> => {
     Box::new(ast::Expr::Var(name))
   },

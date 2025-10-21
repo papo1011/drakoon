@@ -13,6 +13,10 @@ pub enum Expr {
         name: String,
         args: Vec<Expr>,
     },
+    Index {
+        name: String,
+        index: Box<Expr>,
+    },
 }
 
 #[derive(Clone, Debug, PartialEq)]

@@ -2,7 +2,6 @@ use crate::{
     ast::{Expr, Op, Stmt},
     types::{Type, Value, ValueObj, types_compatible},
 };
-use core::panic;
 use std::collections::HashMap;
 
 #[derive(Default)]
@@ -27,6 +26,7 @@ pub struct CodeGen {
     string_literals: HashMap<String, (String, usize)>,
     ret_type: Option<Type>,
     label_count: u32,
+    param_types: HashMap<String, Type>,
 }
 
 impl CodeGen {
@@ -42,6 +42,7 @@ impl CodeGen {
             string_literals: HashMap::new(),
             ret_type: None,
             label_count: 0,
+            param_types: HashMap::new(),
         }
     }
 
@@ -647,13 +648,19 @@ impl CodeGen {
 
         self.ret_type = None;
         self.enter_scope();
+
+        self.param_types.clear();
+        for (n, t) in params {
+            self.param_types.insert(n.clone(), t.clone());
+        }
+
         for (n, t) in params {
             let val = match t {
-                // In scope, un parametro FixedArray[T] è un indirizzo T*
+                // In scope, parametro FixedArray[T] è un indirizzo a T (T*)
                 Type::FixedArray(elem, None) => {
                     Value::new_addr(format!("%{}", n), (**elem).clone())
                 }
-                // [N x T]* mantiene il tipo di array
+                // [N x T]* (non usato come parametro) manteniamo il tipo
                 Type::FixedArray(_, Some(_)) => Value::new_addr(format!("%{}", n), t.clone()),
                 _ => Value::new_val(format!("%{}", n), t.clone()),
             };
@@ -704,6 +711,8 @@ impl CodeGen {
         self.leave_scope();
         self.append("}");
         self.newline();
+
+        self.param_types.clear();
     }
 
     fn append_return(&mut self, value: Option<&Expr>) {
@@ -743,39 +752,56 @@ impl CodeGen {
         let mut arg_vals = Vec::new();
         for (arg_expr, (param_name, param_type)) in args.iter().zip(fn_info.params.iter()) {
             match param_type {
+                // Parameter is FixedArray[T] (without length): expects T*
                 Type::FixedArray(elem, None) => {
                     match arg_expr {
                         Expr::Var(var_name) => {
-                            let arr_addr = self.lookup_lvalue(var_name);
-                            match &arr_addr.ty {
-                                Type::FixedArray(_elem, Some(_)) => {
+                            let addr = self.lookup_lvalue(var_name);
+                            match &addr.ty {
+                                // Argument is local array [N x T]: pass T* via GEP 0,0
+                                Type::FixedArray(_, Some(_)) => {
                                     if !types_compatible(
                                         &Type::FixedArray(elem.clone(), None),
-                                        &arr_addr.ty,
+                                        &addr.ty,
                                     ) {
                                         self.error(&format!(
                                             "Type mismatch in parameter '{}': expected {}, got {}",
-                                            param_name, param_type, arr_addr.ty
+                                            param_name, param_type, addr.ty
                                         ));
                                         return Value::new_val("%undef", Type::Unknown);
                                     }
-                                    // %t = getelementptr inbounds [N x T], [N x T]* %arr, i32 0, i32 0  -> T*
                                     let gep = self.new_tmp();
                                     self.append(&format!(
                                         "{} = getelementptr inbounds {}, {}* {}, i32 0, i32 0",
                                         gep,
-                                        arr_addr.ty.llvm(),
-                                        arr_addr.ty.llvm(),
-                                        arr_addr.repr
+                                        addr.ty.llvm(),
+                                        addr.ty.llvm(),
+                                        addr.repr
                                     ));
                                     arg_vals.push(Value::new_addr(gep, (**elem).clone())); // T*
                                 }
-                                other => {
-                                    self.error(&format!(
-                                        "Parameter '{}' expects a FixedArray argument, got {}",
-                                        param_name, other
-                                    ));
-                                    return Value::new_val("%undef", Type::Unknown);
+                                // Argument is already a FixedArray[T] parameter (T*)
+                                _ => {
+                                    // Check parameter table for var_name as FixedArray[T]
+                                    if let Some(Type::FixedArray(e2, None)) =
+                                        self.param_types.get(var_name)
+                                    {
+                                        if !types_compatible(e2, elem) {
+                                            self.error(&format!(
+                                                "Type mismatch in parameter '{}': expected {}, got pointer to {}",
+                                                param_name, elem.llvm(), e2.llvm()
+                                            ));
+                                            return Value::new_val("%undef", Type::Unknown);
+                                        }
+                                        // Pass directly T*
+                                        arg_vals.push(addr);
+                                    } else {
+                                        self.error(&format!(
+                                            "Parameter '{}' expects a FixedArray argument",
+                                            param_name
+                                        ));
+                                        return Value::new_val("%undef", Type::Unknown);
+                                    }
                                 }
                             }
                         }
@@ -986,6 +1012,55 @@ impl CodeGen {
                 self.binop(operator.clone(), &lhs_val, &rhs_val)
             }
             Expr::Call { name, args } => self.append_fn_call(name, args),
+            Expr::Index { name, index } => {
+                let arr_addr = self.lookup_lvalue(name);
+
+                let idx_val = self.append_expr(index);
+                if idx_val.ty != Type::Int {
+                    self.error("Array index must be Int");
+                }
+
+                match &arr_addr.ty {
+                    // Local array variable: [N x T]
+                    Type::FixedArray(elem_ty, Some(_n)) => {
+                        // GEP: [N x T]*, 0, idx -> T*
+                        let gep = self.new_tmp();
+                        self.append(&format!(
+                            "{} = getelementptr inbounds {}, {}* {}, i32 0, i32 {}",
+                            gep,
+                            arr_addr.ty.llvm(),
+                            arr_addr.ty.llvm(),
+                            arr_addr.repr,
+                            idx_val.repr
+                        ));
+                        let elem_addr = Value::new_addr(gep, (**elem_ty).clone());
+                        self.load_scalar(&elem_addr)
+                    }
+                    // Function parameter: FixedArray[T] passed as T*
+                    _ => {
+                        // Check in the parameter table if 'name' is a FixedArray[T]
+                        if let Some(Type::FixedArray(elem, None)) =
+                            self.param_types.clone().get(name)
+                        {
+                            // GEP: T*, idx -> T*
+                            let gep = self.new_tmp();
+                            self.append(&format!(
+                                "{} = getelementptr inbounds {}, {}* {}, i32 {}",
+                                gep,
+                                elem.llvm(),
+                                elem.llvm(),
+                                arr_addr.repr,
+                                idx_val.repr
+                            ));
+                            let elem_addr = Value::new_addr(gep, (**elem).clone());
+                            self.load_scalar(&elem_addr)
+                        } else {
+                            self.error(&format!("'{}' is not a FixedArray", name));
+                            Value::new_val("%undef", Type::Unknown)
+                        }
+                    }
+                }
+            }
         }
     }
 
