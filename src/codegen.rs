@@ -463,8 +463,6 @@ impl CodeGen {
 
         let idx_num = idx_val.repr.parse().unwrap_or(0);
 
-        println!("{:?}", self.param_types);
-
         match &arr_addr.ty {
             // Local array variable: [N x T]
             Type::FixedArray(elem_ty, Some(n)) => {
