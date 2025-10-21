@@ -1,0 +1,38 @@
+# Initial Target Support
+- [x] Single source file compilation
+- [x] Comments
+- [x] `Int` type (32 bit signed integer)
+- [x] `Double` type (64 bit floating point)
+- [x] `Bool` type (true/false)
+- [x] `Unit` type (similar to void)
+- [x] Arithmetic operations (`+`, `-`, `*`, `/`)
+- [x] Comparison operations (`==`, `!=`, `<`, `>`, `<=`, `>=`)
+- [x] Logical operations (`&&`, `||`)
+- [x] Explicit type declarations `let a : Int = 10`
+- [x] Implicit type inference `let a = 10`
+- [x] Mutable variables `let mut a = 10`
+- [x] Global constants `let a : Int = 10` or `const A : Int = 10 // Always uppercase`
+- [x] FixedArray type (not change values after initialization yet)
+  - [x] Explicit FixedArray type declarations `let arr : FixedArray[Int] = [1, 2, 3, 4, 5]`
+  - [x] Read FixedArray index value `let x = arr[2]` with bounds checking if FixedArray is not passed by reference
+- [x] Loops (`for`, `while`)
+- [x] Conditional statements (`if`, `else`)
+- [x] Functions (not inner functions yet)
+  - [x] parameters simple types by value `fn compute(n : Int) -> Int { ... }`
+  - [x] parameters FixedArray by reference `fn compute(arr : FixedArray[Int]) -> Int { ... }`
+  - [x] explicit return simple types `return result`
+  - [x] function call `compute(5)`
+- [x] Printing to console expressions or strings `println("Hello, World!")`, `println(5 + 10)`
+
+# Next Target Support
+- [ ] String type
+- [ ] Improve FixedArray Support
+  - [ ] Write FixedArray index value `arr[2] = 10` with bounds checking if FixedArray is not passed by reference
+  - [ ] FixedArray length retrieval `let len = arr.length()`
+  - [ ] FixedArray reassignment `arr = [10, 20, 30]`
+- [ ] Improve Functions Support
+  - [ ] Inner functions
+  - [ ] Parameters passed by value for FixedArray and other complex types
+  - [ ] Return complex types (FixedArray, Structs, etc.)
+  - [ ] Implicit return (last expression in function)
+- [ ] Structs and Tuples
