@@ -461,9 +461,21 @@ impl CodeGen {
             self.error("Array index must be Int");
         }
 
+        let idx_num = idx_val.repr.parse().unwrap_or(0);
+
+        println!("{:?}", self.param_types);
+
         match &arr_addr.ty {
             // Local array variable: [N x T]
-            Type::FixedArray(elem_ty, Some(_n)) => {
+            Type::FixedArray(elem_ty, Some(n)) => {
+                if idx_num > n - 1 {
+                    self.error(&format!(
+                        "Array index out of bounds for '{}': max index is {}",
+                        name,
+                        n - 1
+                    ));
+                }
+
                 // GEP: [N x T]*, 0, idx -> T*
                 let gep = self.new_tmp();
                 self.append(&format!(
