@@ -110,8 +110,8 @@ pub Param: (String, Type) = {
 
 pub ParamType: Type = {
   BasicType,
-  "FixedArray" "[" <elem:BasicType> ";" <n:"int"> "]" => {
-    Type::FixedArray(Box::new(elem), n.try_into().unwrap())
+  "FixedArray" "[" <elem:BasicType>"]" => {
+    Type::FixedArray(Box::new(elem), None)
   },
 }
 
@@ -134,12 +134,12 @@ pub StmtFixedArrayDef: ast::Stmt = {
   "let" <name:"id"> ":" "FixedArray" "[" <elem:BasicType> "]" "=" "[" <values:ExprList?> "]" => {
     let vs: Vec<ast::Expr> = values.unwrap_or_default();
     let n = vs.len();
-    ast::Stmt::FixedArrayDef { name, annot: Type::FixedArray(Box::new(elem), n), values: vs, mutable: false }
+    ast::Stmt::FixedArrayDef { name, annot: Type::FixedArray(Box::new(elem), Some(n)), values: vs, mutable: false }
   },
   "let" "mut" <name:"id"> ":" "FixedArray" "[" <elem:BasicType> "]" "=" "[" <values:ExprList?> "]" => {
     let vs: Vec<ast::Expr> = values.unwrap_or_default();
     let n = vs.len();
-    ast::Stmt::FixedArrayDef { name, annot: Type::FixedArray(Box::new(elem), n), values: vs, mutable: true }
+    ast::Stmt::FixedArrayDef { name, annot: Type::FixedArray(Box::new(elem), Some(n)), values: vs, mutable: true }
   },
 }
 
