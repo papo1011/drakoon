@@ -474,6 +474,54 @@ impl CodeGen {
         );
     }
 
+    fn append_read_index(&mut self, name: &str, index: &Expr) -> Value {
+        let arr_addr = self.lookup_lvalue(name);
+
+        let idx_val = self.append_expr(index);
+        if idx_val.ty != Type::Int {
+            self.error("Array index must be Int");
+        }
+
+        match &arr_addr.ty {
+            // Local array variable: [N x T]
+            Type::FixedArray(elem_ty, Some(_n)) => {
+                // GEP: [N x T]*, 0, idx -> T*
+                let gep = self.new_tmp();
+                self.append(&format!(
+                    "{} = getelementptr inbounds {}, {}* {}, i32 0, i32 {}",
+                    gep,
+                    arr_addr.ty.llvm(),
+                    arr_addr.ty.llvm(),
+                    arr_addr.repr,
+                    idx_val.repr
+                ));
+                let elem_addr = Value::new_addr(gep, (**elem_ty).clone());
+                self.load_scalar(&elem_addr)
+            }
+            // Function parameter: FixedArray[T] passed as T*
+            _ => {
+                // Check in the parameter table if 'name' is a FixedArray[T]
+                if let Some(Type::FixedArray(elem, None)) = self.param_types.clone().get(name) {
+                    // GEP: T*, idx -> T*
+                    let gep = self.new_tmp();
+                    self.append(&format!(
+                        "{} = getelementptr inbounds {}, {}* {}, i32 {}",
+                        gep,
+                        elem.llvm(),
+                        elem.llvm(),
+                        arr_addr.repr,
+                        idx_val.repr
+                    ));
+                    let elem_addr = Value::new_addr(gep, (**elem).clone());
+                    self.load_scalar(&elem_addr)
+                } else {
+                    self.error(&format!("'{}' is not a FixedArray", name));
+                    Value::new_val("%undef", Type::Unknown)
+                }
+            }
+        }
+    }
+
     /* -------------------------------------------------------------------------- */
     /*                                MAIN                                        */
     /* -------------------------------------------------------------------------- */
@@ -1012,55 +1060,7 @@ impl CodeGen {
                 self.binop(operator.clone(), &lhs_val, &rhs_val)
             }
             Expr::Call { name, args } => self.append_fn_call(name, args),
-            Expr::Index { name, index } => {
-                let arr_addr = self.lookup_lvalue(name);
-
-                let idx_val = self.append_expr(index);
-                if idx_val.ty != Type::Int {
-                    self.error("Array index must be Int");
-                }
-
-                match &arr_addr.ty {
-                    // Local array variable: [N x T]
-                    Type::FixedArray(elem_ty, Some(_n)) => {
-                        // GEP: [N x T]*, 0, idx -> T*
-                        let gep = self.new_tmp();
-                        self.append(&format!(
-                            "{} = getelementptr inbounds {}, {}* {}, i32 0, i32 {}",
-                            gep,
-                            arr_addr.ty.llvm(),
-                            arr_addr.ty.llvm(),
-                            arr_addr.repr,
-                            idx_val.repr
-                        ));
-                        let elem_addr = Value::new_addr(gep, (**elem_ty).clone());
-                        self.load_scalar(&elem_addr)
-                    }
-                    // Function parameter: FixedArray[T] passed as T*
-                    _ => {
-                        // Check in the parameter table if 'name' is a FixedArray[T]
-                        if let Some(Type::FixedArray(elem, None)) =
-                            self.param_types.clone().get(name)
-                        {
-                            // GEP: T*, idx -> T*
-                            let gep = self.new_tmp();
-                            self.append(&format!(
-                                "{} = getelementptr inbounds {}, {}* {}, i32 {}",
-                                gep,
-                                elem.llvm(),
-                                elem.llvm(),
-                                arr_addr.repr,
-                                idx_val.repr
-                            ));
-                            let elem_addr = Value::new_addr(gep, (**elem).clone());
-                            self.load_scalar(&elem_addr)
-                        } else {
-                            self.error(&format!("'{}' is not a FixedArray", name));
-                            Value::new_val("%undef", Type::Unknown)
-                        }
-                    }
-                }
-            }
+            Expr::Index { name, index } => self.append_read_index(name, index),
         }
     }
 
