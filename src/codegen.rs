@@ -5,14 +5,14 @@ use crate::{
 use std::collections::HashMap;
 
 #[derive(Default)]
-pub struct Scope {
-    pub vars: HashMap<String, ValueObj>,
+struct Scope {
+    vars: HashMap<String, ValueObj>,
 }
 
 #[derive(Default, Clone)]
 pub struct FnInfo {
-    pub params: Vec<(String, Type)>,
-    pub ret_type: Type,
+    params: Vec<(String, Type)>,
+    ret_type: Type,
 }
 
 pub struct CodeGen {
@@ -26,6 +26,7 @@ pub struct CodeGen {
     string_literals: HashMap<String, (String, usize)>,
     ret_type: Option<Type>,
     label_count: u32,
+    param_types: HashMap<String, Type>,
 }
 
 impl CodeGen {
@@ -41,16 +42,17 @@ impl CodeGen {
             string_literals: HashMap::new(),
             ret_type: None,
             label_count: 0,
+            param_types: HashMap::new(),
         }
     }
 
-    pub fn append(&mut self, s: &str) {
+    fn append(&mut self, s: &str) {
         self.output.push_str("  ");
         self.output.push_str(s);
         self.output.push('\n');
     }
 
-    pub fn newline(&mut self) {
+    fn newline(&mut self) {
         self.output.push('\n');
     }
 
@@ -77,41 +79,32 @@ impl CodeGen {
     }
 
     /// Generate a new temporary register name to guarantee uniqueness
-    pub fn new_tmp(&mut self) -> String {
+    fn new_tmp(&mut self) -> String {
         let register = format!("%t{}", self.tmp_count);
         self.tmp_count += 1;
         register
     }
 
-    pub fn enter_scope(&mut self) {
+    fn enter_scope(&mut self) {
         self.scopes.push(Scope::default());
     }
 
-    pub fn leave_scope(&mut self) {
+    fn leave_scope(&mut self) {
         self.scopes.pop();
     }
 
-    pub fn current_scope_mut(&mut self) -> &mut Scope {
+    fn current_scope_mut(&mut self) -> &mut Scope {
         self.scopes.last_mut().expect("No scope available")
     }
 
-    pub fn is_name_available(&self, name: &str) -> bool {
+    fn is_name_available(&self, name: &str) -> bool {
         !self.scopes.last().unwrap().vars.contains_key(name)
     }
 
     /// Look up a variable by name, searching from the innermost scope outward
-    pub fn lookup(&self, name: &str) -> Option<&ValueObj> {
+    fn lookup(&self, name: &str) -> Option<&ValueObj> {
         for s in self.scopes.iter().rev() {
             if let Some(v) = s.vars.get(name) {
-                return Some(v);
-            }
-        }
-        None
-    }
-
-    pub fn lookup_mut(&mut self, name: &str) -> Option<&mut ValueObj> {
-        for s in self.scopes.iter_mut().rev() {
-            if let Some(v) = s.vars.get_mut(name) {
                 return Some(v);
             }
         }
@@ -122,7 +115,7 @@ impl CodeGen {
     /// This function looks up a variable and returns its address Value
     ///
     /// If not found, it reports an error and returns a dummy Value
-    pub fn lookup_lvalue(&mut self, name: &str) -> Value {
+    fn lookup_lvalue(&mut self, name: &str) -> Value {
         if let Some(v) = self.lookup(name) {
             return v.val.clone();
         }
@@ -136,9 +129,9 @@ impl CodeGen {
     ///
     /// If the input Value is an address of an array, it reports an error since arrays
     /// cannot be used directly in expressions.
-    pub fn rvalue(&mut self, v: &Value) -> Value {
+    fn rvalue(&mut self, v: &Value) -> Value {
         if v.is_addr {
-            if matches!(v.ty, Type::Array(_, _)) {
+            if matches!(v.ty, Type::FixedArray(_, _)) {
                 self.error(
                     "Cannot use array value directly in expression; index it or pass its address.",
                 );
@@ -150,7 +143,7 @@ impl CodeGen {
         }
     }
 
-    pub fn load_scalar(&mut self, addr: &Value) -> Value {
+    fn load_scalar(&mut self, addr: &Value) -> Value {
         let tmp = self.new_tmp();
         self.append(&format!(
             "{} = load {}, {}* {}, align {}",
@@ -163,7 +156,7 @@ impl CodeGen {
         Value::new_val(tmp, addr.ty.clone())
     }
 
-    pub fn store_scalar(&mut self, dst_addr: &Value, src_val: &Value) {
+    fn store_scalar(&mut self, dst_addr: &Value, src_val: &Value) {
         let rhs = self.rvalue(src_val);
         if !types_compatible(&dst_addr.ty, &rhs.ty) {
             self.error(&format!(
@@ -183,7 +176,7 @@ impl CodeGen {
     }
 
     /// Allocates space on the stack for a variable of the given type and returns its address as a Value.
-    pub fn alloca_of_type(&mut self, name: &str, ty: &Type) -> Value {
+    fn alloca_of_type(&mut self, name: &str, ty: &Type) -> Value {
         let repr = format!("%{}", name);
         self.append(&format!(
             "{} = alloca {}, align {}",
@@ -220,6 +213,14 @@ impl CodeGen {
             Stmt::VarAssign { name, value } => {
                 let val = self.append_expr(value);
                 self.var_assignment(name, val);
+            }
+            Stmt::FixedArrayDef {
+                name,
+                annot,
+                values,
+                mutable,
+            } => {
+                self.append_fixed_array_def(name, annot, values, *mutable);
             }
             Stmt::PrintExpr { value } => {
                 self.append_print_expr(value);
@@ -324,13 +325,7 @@ impl CodeGen {
         );
     }
 
-    pub fn var_definition(
-        &mut self,
-        name: String,
-        annot: Option<Type>,
-        init: Value,
-        mutable: bool,
-    ) {
+    fn var_definition(&mut self, name: String, annot: Option<Type>, init: Value, mutable: bool) {
         if !self.is_name_available(&name) {
             self.error(&format!(
                 "Variable '{}' already declared in this scope",
@@ -363,7 +358,7 @@ impl CodeGen {
         self.current_scope_mut().vars.insert(name, vo);
     }
 
-    pub fn var_assignment(&mut self, name: &str, value: Value) {
+    fn var_assignment(&mut self, name: &str, value: Value) {
         let addr = match self.lookup(name) {
             Some(var) if var.mutable => var.val.clone(),
             Some(_) => {
@@ -389,10 +384,138 @@ impl CodeGen {
     }
 
     /* -------------------------------------------------------------------------- */
+    /*                               ARRAY                                        */
+    /* -------------------------------------------------------------------------- */
+
+    fn append_fixed_array_def(&mut self, name: &str, annot: &Type, values: &[Expr], mutable: bool) {
+        if !self.is_name_available(name) {
+            self.error(&format!(
+                "Variable '{}' already declared in this scope",
+                name
+            ));
+        }
+
+        let (elem_ty, computed_len) = match annot {
+            Type::FixedArray(elem, n) => ((**elem).clone(), *n),
+            other => {
+                self.error(&format!(
+                    "Annotation for '{}' must be FixedArray, found {}",
+                    name, other
+                ));
+                return;
+            }
+        };
+
+        let computed_len = match computed_len {
+            Some(n) => n,
+            None => {
+                self.error(&format!(
+                    "FixedArray '{}' must have a known length in its annotation",
+                    name
+                ));
+                return;
+            }
+        };
+
+        let addr = self.alloca_of_type(name, annot);
+
+        for (i, value) in values.iter().enumerate().take(computed_len) {
+            let v = self.append_expr(value);
+            if !types_compatible(&elem_ty, &v.ty) {
+                self.error(&format!(
+                    "Type mismatch initializing '{}[{}]': expected {}, got {}",
+                    name, i, elem_ty, v.ty
+                ));
+                continue;
+            }
+
+            let gep = self.new_tmp();
+            self.append(&format!(
+                "{} = getelementptr inbounds {}, {}* {}, i32 0, i32 {}",
+                gep,
+                annot.llvm(),
+                annot.llvm(),
+                addr.repr,
+                i
+            ));
+
+            let elem_addr = Value::new_addr(gep, elem_ty.clone());
+            self.store_scalar(&elem_addr, &v);
+        }
+
+        self.current_scope_mut().vars.insert(
+            name.to_string(),
+            ValueObj {
+                name: name.to_string(),
+                val: addr,
+                mutable,
+            },
+        );
+    }
+
+    fn append_read_index(&mut self, name: &str, index: &Expr) -> Value {
+        let arr_addr = self.lookup_lvalue(name);
+
+        let idx_val = self.append_expr(index);
+        if idx_val.ty != Type::Int {
+            self.error("Array index must be Int");
+        }
+
+        let idx_num = idx_val.repr.parse().unwrap_or(0);
+
+        match &arr_addr.ty {
+            // Local array variable: [N x T]
+            Type::FixedArray(elem_ty, Some(n)) => {
+                if idx_num > n - 1 {
+                    self.error(&format!(
+                        "Array index out of bounds for '{}': max index is {}",
+                        name,
+                        n - 1
+                    ));
+                }
+
+                // GEP: [N x T]*, 0, idx -> T*
+                let gep = self.new_tmp();
+                self.append(&format!(
+                    "{} = getelementptr inbounds {}, {}* {}, i32 0, i32 {}",
+                    gep,
+                    arr_addr.ty.llvm(),
+                    arr_addr.ty.llvm(),
+                    arr_addr.repr,
+                    idx_val.repr
+                ));
+                let elem_addr = Value::new_addr(gep, (**elem_ty).clone());
+                self.load_scalar(&elem_addr)
+            }
+            // Function parameter: FixedArray[T] passed as T*
+            _ => {
+                // Check in the parameter table if 'name' is a FixedArray[T]
+                if let Some(Type::FixedArray(elem, None)) = self.param_types.clone().get(name) {
+                    // GEP: T*, idx -> T*
+                    let gep = self.new_tmp();
+                    self.append(&format!(
+                        "{} = getelementptr inbounds {}, {}* {}, i32 {}",
+                        gep,
+                        elem.llvm(),
+                        elem.llvm(),
+                        arr_addr.repr,
+                        idx_val.repr
+                    ));
+                    let elem_addr = Value::new_addr(gep, (**elem).clone());
+                    self.load_scalar(&elem_addr)
+                } else {
+                    self.error(&format!("'{}' is not a FixedArray", name));
+                    Value::new_val("%undef", Type::Unknown)
+                }
+            }
+        }
+    }
+
+    /* -------------------------------------------------------------------------- */
     /*                                MAIN                                        */
     /* -------------------------------------------------------------------------- */
 
-    pub fn start_main(&mut self) {
+    fn start_main(&mut self) {
         if self.functions.contains_key("main") {
             self.error("Multiple 'main' function definitions.");
             return;
@@ -402,14 +525,14 @@ impl CodeGen {
         self.append("entry:");
     }
 
-    pub fn end_main(&mut self) {
+    fn end_main(&mut self) {
         if self.functions.contains_key("main") {
             self.append("ret i32 0");
             self.append("}");
         }
     }
 
-    pub fn append_main(&mut self, body: &[Stmt]) {
+    fn append_main(&mut self, body: &[Stmt]) {
         self.start_main();
         for stmt in body {
             self.append_stmt(stmt);
@@ -463,7 +586,7 @@ impl CodeGen {
         )
     }
 
-    pub fn append_print_expr(&mut self, expr: &Expr) {
+    fn append_print_expr(&mut self, expr: &Expr) {
         self.declare_printf_once();
         let val = self.append_expr(expr);
 
@@ -497,7 +620,7 @@ impl CodeGen {
         ));
     }
 
-    pub fn append_print_string(&mut self, text: &str) {
+    fn append_print_string(&mut self, text: &str) {
         self.declare_printf_once();
         let string_ptr = self.global_str(text);
         let format_ptr = self.global_str("%s\n");
@@ -512,7 +635,7 @@ impl CodeGen {
     /*                             FUNCTION DEFINITION                            */
     /* -------------------------------------------------------------------------- */
 
-    pub fn append_fn_def(
+    fn append_fn_def(
         &mut self,
         name: &str,
         params: &[(String, Type)],
@@ -541,7 +664,13 @@ impl CodeGen {
 
         let params_str = params
             .iter()
-            .map(|(n, t)| format!("{} %{}", t.llvm(), n))
+            .map(|(n, t)| match t {
+                Type::FixedArray(elem, None) => format!("{}* %{}", elem.llvm(), n),
+                Type::FixedArray(_, Some(_)) => {
+                    panic!("Function parameters cannot be FixedArray with known length")
+                }
+                _ => format!("{} %{}", t.llvm(), n),
+            })
             .collect::<Vec<_>>()
             .join(", ");
 
@@ -556,12 +685,27 @@ impl CodeGen {
 
         self.ret_type = None;
         self.enter_scope();
+
+        self.param_types.clear();
         for (n, t) in params {
+            self.param_types.insert(n.clone(), t.clone());
+        }
+
+        for (n, t) in params {
+            let val = match t {
+                // In scope, parametro FixedArray[T] è un indirizzo a T (T*)
+                Type::FixedArray(elem, None) => {
+                    Value::new_addr(format!("%{}", n), (**elem).clone())
+                }
+                // [N x T]* (non usato come parametro) manteniamo il tipo
+                Type::FixedArray(_, Some(_)) => Value::new_addr(format!("%{}", n), t.clone()),
+                _ => Value::new_val(format!("%{}", n), t.clone()),
+            };
             self.current_scope_mut().vars.insert(
                 n.clone(),
                 ValueObj {
                     name: n.clone(),
-                    val: Value::new_val(format!("%{}", n), t.clone()),
+                    val,
                     mutable: false,
                 },
             );
@@ -604,6 +748,8 @@ impl CodeGen {
         self.leave_scope();
         self.append("}");
         self.newline();
+
+        self.param_types.clear();
     }
 
     fn append_return(&mut self, value: Option<&Expr>) {
@@ -642,21 +788,97 @@ impl CodeGen {
 
         let mut arg_vals = Vec::new();
         for (arg_expr, (param_name, param_type)) in args.iter().zip(fn_info.params.iter()) {
-            let arg_val = self.append_expr(arg_expr);
-            if !types_compatible(&arg_val.ty, param_type) {
-                self.error(&format!(
-                    "Type mismatch in argument '{}' of call to '{}': expected {}, got {}",
-                    param_name, name, param_type, arg_val.ty
-                ));
-                return Value::new_val("%undef", Type::Unknown);
+            match param_type {
+                // Parameter is FixedArray[T] (without length): expects T*
+                Type::FixedArray(elem, None) => {
+                    match arg_expr {
+                        Expr::Var(var_name) => {
+                            let addr = self.lookup_lvalue(var_name);
+                            match &addr.ty {
+                                // Argument is local array [N x T]: pass T* via GEP 0,0
+                                Type::FixedArray(_, Some(_)) => {
+                                    if !types_compatible(
+                                        &Type::FixedArray(elem.clone(), None),
+                                        &addr.ty,
+                                    ) {
+                                        self.error(&format!(
+                                            "Type mismatch in parameter '{}': expected {}, got {}",
+                                            param_name, param_type, addr.ty
+                                        ));
+                                        return Value::new_val("%undef", Type::Unknown);
+                                    }
+                                    let gep = self.new_tmp();
+                                    self.append(&format!(
+                                        "{} = getelementptr inbounds {}, {}* {}, i32 0, i32 0",
+                                        gep,
+                                        addr.ty.llvm(),
+                                        addr.ty.llvm(),
+                                        addr.repr
+                                    ));
+                                    arg_vals.push(Value::new_addr(gep, (**elem).clone())); // T*
+                                }
+                                // Argument is already a FixedArray[T] parameter (T*)
+                                _ => {
+                                    // Check parameter table for var_name as FixedArray[T]
+                                    if let Some(Type::FixedArray(e2, None)) =
+                                        self.param_types.get(var_name)
+                                    {
+                                        if !types_compatible(e2, elem) {
+                                            self.error(&format!(
+                                                "Type mismatch in parameter '{}': expected {}, got pointer to {}",
+                                                param_name, elem.llvm(), e2.llvm()
+                                            ));
+                                            return Value::new_val("%undef", Type::Unknown);
+                                        }
+                                        // Pass directly T*
+                                        arg_vals.push(addr);
+                                    } else {
+                                        self.error(&format!(
+                                            "Parameter '{}' expects a FixedArray argument",
+                                            param_name
+                                        ));
+                                        return Value::new_val("%undef", Type::Unknown);
+                                    }
+                                }
+                            }
+                        }
+                        _ => {
+                            self.error(&format!(
+                                "Parameter '{}' expects an array variable passed by reference",
+                                param_name
+                            ));
+                            return Value::new_val("%undef", Type::Unknown);
+                        }
+                    }
+                }
+                Type::FixedArray(_, Some(_)) => {
+                    panic!("Function parameters cannot be FixedArray with known length")
+                }
+                _ => {
+                    let v = self.append_expr(arg_expr);
+                    if !types_compatible(&v.ty, param_type) {
+                        self.error(&format!(
+                            "Type mismatch in parameter '{}': expected {}, got {}",
+                            param_name, param_type, v.ty
+                        ));
+                        return Value::new_val("%undef", Type::Unknown);
+                    }
+                    arg_vals.push(v);
+                }
             }
-            arg_vals.push(arg_val);
         }
 
         let tmp = self.new_tmp();
         let args_str = arg_vals
             .iter()
-            .map(|v| format!("{} {}", v.ty.llvm(), v.repr))
+            .map(|v| {
+                let ty = if v.is_addr {
+                    format!("{}*", v.ty.llvm())
+                } else {
+                    v.ty.llvm()
+                };
+                format!("{} {}", ty, v.repr)
+            })
             .collect::<Vec<_>>()
             .join(", ");
 
@@ -812,7 +1034,7 @@ impl CodeGen {
     /*                                EXPRESSION                                  */
     /* -------------------------------------------------------------------------- */
 
-    pub fn append_expr(&mut self, expr: &Expr) -> Value {
+    fn append_expr(&mut self, expr: &Expr) -> Value {
         match expr {
             Expr::Int(i) => Value::new_val(i.to_string(), Type::Int),
             Expr::Double(d) => Value::new_val(format!("{:?}", d), Type::Double),
@@ -827,10 +1049,11 @@ impl CodeGen {
                 self.binop(operator.clone(), &lhs_val, &rhs_val)
             }
             Expr::Call { name, args } => self.append_fn_call(name, args),
+            Expr::Index { name, index } => self.append_read_index(name, index),
         }
     }
 
-    pub fn binop(&mut self, op: Op, lhs: &Value, rhs: &Value) -> Value {
+    fn binop(&mut self, op: Op, lhs: &Value, rhs: &Value) -> Value {
         let lhs = self.rvalue(lhs);
         let rhs = self.rvalue(rhs);
 

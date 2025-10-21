@@ -26,8 +26,7 @@ fn main() {
     }
 
     if !codegen.functions.contains_key("main") {
-        eprintln!("Error: 'main' function is not defined.");
-        std::process::exit(1);
+        codegen.error("'main' function is not defined.");
     }
 
     if codegen.sem_errors > 0 {
