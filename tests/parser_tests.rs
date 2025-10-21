@@ -277,3 +277,22 @@ fn fixed_array_definition() {
         "[MainDef { body: [FixedArrayDef { name: \"arr\", annot: FixedArray(Int, Some(5)), values: [Int(1), Int(2), Int(3), Int(4), Int(5)], mutable: false }, PrintString { value: \"Array defined\" }] }]"
     );
 }
+
+#[test]
+fn read_index_array() {
+    let mbt = r#"
+        fn main {
+            let arr : FixedArray[Int] = [10, 20, 30]
+            let value = arr[1]
+            println(value)
+        }
+    "#;
+
+    let lexer = Lexer::new(mbt);
+    let ast = ScriptParser::new().parse(lexer).unwrap();
+
+    assert_eq!(
+        &format!("{:?}", ast),
+        "[MainDef { body: [FixedArrayDef { name: \"arr\", annot: FixedArray(Int, Some(3)), values: [Int(10), Int(20), Int(30)], mutable: false }, VarDef { name: \"value\", annot: None, value: Index { name: \"arr\", index: Int(1) }, mutable: false }, PrintExpr { value: Var(\"value\") }] }]"
+    );
+}
