@@ -31,21 +31,20 @@ pub StmtMainDef: ast::Stmt = {
     ast::Stmt::MainDef {
         body,
     }
-  },
+  }
 }
 
 StmtIf: ast::Stmt = {
-    "if" <cond:Expr> "{" <then_body:Stmt*> "}" => ast::Stmt::If {
+    "if" <cond:Expr> "{" <then_body:Stmt*> "}" <else_body:Else?> => ast::Stmt::If {
         cond,
         then_body,
-        else_body: None,
-    },
-    "if" <cond:Expr> "{" <then_body:Stmt*> "}" "else" "{" <else_body:Stmt*> "}" => ast::Stmt::If {
-        cond,
-        then_body,
-        else_body: Some(else_body),
-    },
-};
+        else_body,
+    }
+}
+
+Else: Vec<ast::Stmt> = {
+  "else" "{" <body:Stmt*> "}" => body,
+}
 
 pub StmtWhile: ast::Stmt = {
   "while" <cond:Expr> "{" <body:Stmt*> "}" => ast::Stmt::While { cond, body },
@@ -54,13 +53,13 @@ pub StmtWhile: ast::Stmt = {
 pub StmtVarDefFor: ast::Stmt = {
   <name:"id"> "=" <value:Expr>  => {
     ast::Stmt::VarDef { name, annot: None, value, mutable: true }
-  },
+  }
 }
 
 pub StmtFor: ast::Stmt = {
   "for" <init:StmtVarDefFor?> ";" <cond:Expr?> ";" <step:StmtVarAssign?> "{" <body:Stmt*> "}" => {
     ast::Stmt::For { init: init.map(Box::new), cond, step: step.map(Box::new), body }
-  },
+  }
 }
 
 pub StmtReturn: ast::Stmt = {
@@ -75,13 +74,13 @@ pub StmtFnDef: ast::Stmt = {
         ret_type: ret,
         body,
     }
-  },
+  }
 }
 
 pub StmtFnCall: ast::Stmt = {
   <name:"id"> "(" <args:ExprList?> ")" => {
     ast::Stmt::FnCall { name, args: args.unwrap_or_default() }
-  },
+  }
 }
 
 pub ExprValue: ast::Expr = {
@@ -134,17 +133,11 @@ pub StmtFixedArrayDef: ast::Stmt = {
 }
 
 pub StmtGlobalVarDef: ast::Stmt = {
-  "let" <name:"id"> "=" <value:BasicTerm>  => {
-    ast::Stmt::GlobalVarDef { name, annot: None, value, is_const: false }
+  "let" <name:"id"> <annot:Annotation?>"=" <value:BasicTerm>  => {
+    ast::Stmt::GlobalVarDef { name, annot, value, is_const: false }
   },
-  "let" <name:"id"> ":" <annot:BasicType> "=" <value:BasicTerm>  => {
-    ast::Stmt::GlobalVarDef { name, annot: Some(annot), value, is_const: false }
-  },
-  "const" <name:"id"> "=" <value:BasicTerm>  => {
-    ast::Stmt::GlobalVarDef { name, annot: None, value, is_const: true }
-  },
-  "const" <name:"id"> ":" <annot:BasicType> "=" <value:BasicTerm>  => {
-    ast::Stmt::GlobalVarDef { name, annot: Some(annot), value, is_const: true }
+  "const" <name:"id"> <annot:Annotation?> "=" <value:BasicTerm>  => {
+    ast::Stmt::GlobalVarDef { name, annot, value, is_const: true }
   },
 }
 
