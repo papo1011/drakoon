@@ -384,7 +384,7 @@ impl CodeGen {
     }
 
     /* -------------------------------------------------------------------------- */
-    /*                               ARRAY                                        */
+    /*                                 ARRAY                                      */
     /* -------------------------------------------------------------------------- */
 
     fn append_fixed_array_def(&mut self, name: &str, annot: &Type, values: &[Expr], mutable: bool) {
@@ -512,7 +512,7 @@ impl CodeGen {
     }
 
     /* -------------------------------------------------------------------------- */
-    /*                                MAIN                                        */
+    /*                                  MAIN                                      */
     /* -------------------------------------------------------------------------- */
 
     fn start_main(&mut self) {
@@ -541,7 +541,7 @@ impl CodeGen {
     }
 
     /* -------------------------------------------------------------------------- */
-    /*                                PRINT                                       */
+    /*                                 PRINT                                      */
     /* -------------------------------------------------------------------------- */
 
     fn declare_printf_once(&mut self) {
@@ -632,7 +632,7 @@ impl CodeGen {
     }
 
     /* -------------------------------------------------------------------------- */
-    /*                             FUNCTION DEFINITION                            */
+    /*                                 FUNCTION                                   */
     /* -------------------------------------------------------------------------- */
 
     fn append_fn_def(
@@ -693,11 +693,11 @@ impl CodeGen {
 
         for (n, t) in params {
             let val = match t {
-                // In scope, parametro FixedArray[T] è un indirizzo a T (T*)
+                // T* for FixedArray[T] parameter
                 Type::FixedArray(elem, None) => {
                     Value::new_addr(format!("%{}", n), (**elem).clone())
                 }
-                // [N x T]* (non usato come parametro) manteniamo il tipo
+                // [N x T]* (not used as parameter)
                 Type::FixedArray(_, Some(_)) => Value::new_addr(format!("%{}", n), t.clone()),
                 _ => Value::new_val(format!("%{}", n), t.clone()),
             };
@@ -762,10 +762,6 @@ impl CodeGen {
             self.append("ret i8 0"); // return Unit
         }
     }
-
-    /* -------------------------------------------------------------------------- */
-    /*                               FUNCTION CALL                                */
-    /* -------------------------------------------------------------------------- */
 
     fn append_fn_call(&mut self, name: &str, args: &[Expr]) -> Value {
         let fn_info = match self.functions.get(name).cloned() {
@@ -893,7 +889,7 @@ impl CodeGen {
     }
 
     /* -------------------------------------------------------------------------- */
-    /*                                 IF ELSE                                    */
+    /*                               CONTROL FLOW                                 */
     /* -------------------------------------------------------------------------- */
 
     fn append_if_else(&mut self, cond: &Expr, then_body: &[Stmt], else_body: Option<&[Stmt]>) {
@@ -947,7 +943,7 @@ impl CodeGen {
     }
 
     /* -------------------------------------------------------------------------- */
-    /*                                WHILE                                       */
+    /*                                  LOOP                                      */
     /* -------------------------------------------------------------------------- */
 
     fn append_while(&mut self, cond: &Expr, body: &[Stmt]) {
@@ -976,10 +972,6 @@ impl CodeGen {
 
         self.append_label(&l_end);
     }
-
-    /* -------------------------------------------------------------------------- */
-    /*                                  FOR                                       */
-    /* -------------------------------------------------------------------------- */
 
     fn append_for(
         &mut self,
