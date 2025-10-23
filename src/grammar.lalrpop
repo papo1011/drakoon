@@ -116,31 +116,21 @@ pub ParamType: Type = {
 }
 
 pub StmtVarDef: ast::Stmt = {
-  "let" <name:"id"> "=" <value:Expr>  => {
-    ast::Stmt::VarDef { name, annot: None, value, mutable: false }
-  },
-  "let" "mut" <name:"id"> "=" <value:Expr>  => {
-    ast::Stmt::VarDef { name, annot: None, value, mutable: true }
-  },
-  "let" <name:"id"> ":" <annot:BasicType> "=" <value:Expr>  => {
-    ast::Stmt::VarDef { name, annot: Some(annot), value, mutable: false }
-  },
-  "let" "mut" <name:"id"> ":" <annot:BasicType> "=" <value:Expr>  => {
-    ast::Stmt::VarDef { name, annot: Some(annot), value, mutable: true }
-  },
+  "let" <mutable:"mut"?> <name:"id"> <annot:Annotation?> "=" <value:Expr>  => {
+    ast::Stmt::VarDef { name, annot, value, mutable: mutable.is_some() }
+  }
+}
+
+pub Annotation: Type = {
+  ":" <annot:BasicType> => annot
 }
 
 pub StmtFixedArrayDef: ast::Stmt = {
-  "let" <name:"id"> ":" "FixedArray" "[" <elem:BasicType> "]" "=" "[" <values:ExprList?> "]" => {
+  "let" <mutable:"mut"?> <name:"id"> ":" "FixedArray" "[" <elem:BasicType> "]" "=" "[" <values:ExprList?> "]" => {
     let vs: Vec<ast::Expr> = values.unwrap_or_default();
     let n = vs.len();
-    ast::Stmt::FixedArrayDef { name, annot: Type::FixedArray(Box::new(elem), Some(n)), values: vs, mutable: false }
-  },
-  "let" "mut" <name:"id"> ":" "FixedArray" "[" <elem:BasicType> "]" "=" "[" <values:ExprList?> "]" => {
-    let vs: Vec<ast::Expr> = values.unwrap_or_default();
-    let n = vs.len();
-    ast::Stmt::FixedArrayDef { name, annot: Type::FixedArray(Box::new(elem), Some(n)), values: vs, mutable: true }
-  },
+    ast::Stmt::FixedArrayDef { name, annot: Type::FixedArray(Box::new(elem), Some(n)), values: vs, mutable: mutable.is_some() }
+  }
 }
 
 pub StmtGlobalVarDef: ast::Stmt = {
