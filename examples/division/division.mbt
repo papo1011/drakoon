@@ -2,7 +2,7 @@
 fn division(a : Double, b : Double) -> Double {
   if b == 0.0 {
     println("ERR")
-    return 0.0
+    return -1.0
   } else {
     return a / b
   }

@@ -164,14 +164,7 @@ pub StmtPrint: ast::Stmt = {
 }
 
 pub Term: Box<ast::Expr> = {
-  <value:"int"> => {
-    Box::new(ast::Expr::Int(value))
-  },
-  <value:"double"> => {
-    Box::new(ast::Expr::Double(value))
-  },
-  "true" => Box::new(ast::Expr::Bool(true)),
-  "false" => Box::new(ast::Expr::Bool(false)),
+  BasicTerm,
   <name:"id"> "(" <args:ExprList?> ")" => {
     let args: Vec<ast::Expr> = args.unwrap_or_default();
     Box::new(ast::Expr::Call { name, args })
@@ -186,11 +179,11 @@ pub Term: Box<ast::Expr> = {
 }
 
 pub BasicTerm: Box<ast::Expr> = {
-  <value:"int"> => {
-    Box::new(ast::Expr::Int(value))
+  <minus:"-"?> <value:"int"> => {
+    Box::new(ast::Expr::Int(value * if minus.is_some() { -1 } else { 1 }))
   },
-  <value:"double"> => {
-    Box::new(ast::Expr::Double(value))
+  <minus:"-"?> <value:"double"> => {
+    Box::new(ast::Expr::Double(value * if minus.is_some() { -1.0 } else { 1.0 }))
   },
   "true" => Box::new(ast::Expr::Bool(true)),
   "false" => Box::new(ast::Expr::Bool(false)),

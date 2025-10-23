@@ -10,7 +10,7 @@ declare i32 @printf(i8*, ...)
   br i1 %t0, label %if.then.0, label %if.else.0
 if.then.0:
   %t1 = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str.1, i32 0, i32 0), i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str.0, i32 0, i32 0))
-  ret double 0.0
+  ret double -1.0
   br label %if.end.0
 if.else.0:
   %t2 = fdiv double %a, %b
