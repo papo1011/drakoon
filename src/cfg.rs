@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 
 use crate::ast::{Expr, Stmt};
+use crate::types::Type;
 
 pub type NodeId = usize;
 
@@ -8,26 +9,25 @@ pub type NodeId = usize;
 pub enum CfgNodeKind {
     Entry,
     Exit,
-    // Simple statements / side effects
     Assign {
         name: String,
         value: Expr,
     },
     VarDef {
         name: String,
-        annot: Option<crate::types::Type>,
+        annot: Option<Type>,
         value: Expr,
         mutable: bool,
     },
     GlobalVarDef {
         name: String,
-        annot: Option<crate::types::Type>,
+        annot: Option<Type>,
         value: Expr,
         is_const: bool,
     },
     FixedArrayDef {
         name: String,
-        annot: crate::types::Type,
+        annot: Type,
         values: Vec<Expr>,
         mutable: bool,
     },
@@ -44,7 +44,6 @@ pub enum CfgNodeKind {
     Return {
         value: Option<Expr>,
     },
-    // Branch
     Condition {
         cond: Expr,
     },
@@ -83,7 +82,6 @@ pub struct Cfg {
 impl Cfg {
     pub fn new() -> Self {
         let mut nodes = Vec::new();
-        // Reserve Entry and Exit nodes
         let entry = 0usize;
         nodes.push(CfgNode::new(entry, CfgNodeKind::Entry));
         let exit = 1usize;
@@ -118,7 +116,7 @@ impl Cfg {
         self.add_pred(to, from);
     }
 
-    /// Optional: export a Graphviz DOT representation of the CFG
+    /// Export a Graphviz DOT representation of the CFG
     pub fn to_dot(&self, name: &str) -> String {
         let mut out = String::new();
         out.push_str(&format!("digraph {} {{\n", name));
@@ -194,6 +192,12 @@ impl Cfg {
     }
 }
 
+impl Default for Cfg {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 pub struct ProgramCfg {
     pub main: Option<Cfg>,
     pub functions: HashMap<String, Cfg>,
@@ -205,6 +209,12 @@ impl ProgramCfg {
             main: None,
             functions: HashMap::new(),
         }
+    }
+}
+
+impl Default for ProgramCfg {
+    fn default() -> Self {
+        Self::new()
     }
 }
 
@@ -303,10 +313,7 @@ impl CfgBuilder {
                 params: _,
                 ret_type: _,
                 body,
-            } => {
-                // Local function literal not supported in this language; if present inline block
-                self.build_block(body, next)
-            }
+            } => self.build_block(body, next),
             Stmt::FnCall { name, args } => {
                 let id = self.g.add_node(CfgNodeKind::Call {
                     name: name.clone(),
@@ -319,7 +326,6 @@ impl CfgBuilder {
                 let id = self.g.add_node(CfgNodeKind::Return {
                     value: value.as_ref().map(|v| *v.clone()),
                 });
-                // Returns jump to Exit
                 self.g.set_next(id, self.g.exit);
                 id
             }
