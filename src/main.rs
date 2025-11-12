@@ -2,7 +2,7 @@ mod cli;
 
 use clap::Parser;
 use cli::Cli;
-use drakoon::{codegen::CodeGen, grammar::ScriptParser, lexer::Lexer};
+use drakoon::{cfg::build_program_cfg, codegen::CodeGen, grammar::ScriptParser, lexer::Lexer};
 use std::fs;
 
 fn main() {
@@ -19,6 +19,20 @@ fn main() {
     let lexer = Lexer::new(&source);
     let parser = ScriptParser::new();
     let ast = parser.parse(lexer).unwrap();
+
+    if args.cfg {
+        let prog_cfg = build_program_cfg(&ast);
+
+        if let Some(main_cfg) = prog_cfg.main.as_ref() {
+            println!("{}", main_cfg.to_dot("main"));
+        }
+
+        for (name, fun_cfg) in &prog_cfg.functions {
+            println!("{}", fun_cfg.to_dot(name));
+        }
+
+        return;
+    }
 
     let mut codegen = CodeGen::new();
     for stmt in &ast {

@@ -180,7 +180,7 @@ impl Cfg {
         }
         for n in &self.nodes {
             if let Some(to) = n.next {
-                out.push_str(&format!("  {} -> {} [label=\"next\"];\n", n.id, to));
+                out.push_str(&format!("  {} -> {};\n", n.id, to));
             }
             if let Some(to) = n.true_next {
                 out.push_str(&format!("  {} -> {} [label=\"T\"];\n", n.id, to));
